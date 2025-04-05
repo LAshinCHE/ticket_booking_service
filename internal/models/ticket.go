@@ -7,13 +7,13 @@ type (
 type TicketStatus string
 
 const (
-	TicketActiveStatus   TicketStatus = "active"
-	TicketInactiveStatus TicketStatus = "inactive"
-	TicketArchivedStatus TicketStatus = "archived"
-	TicketDeletedStatus  TicketStatus = "deleted"
+	TicketActiveStatus   TicketStatus = "active"   // доступный для бронирования
+	TicketInactiveStatus TicketStatus = "inactive" // не доступный для бронирования
+	TicketArchivedStatus TicketStatus = "archived" // находится в архиве
+	TicketDeletedStatus  TicketStatus = "deleted"  // удаленн
 )
 
 type Ticket struct {
-	id     int64
-	status TicketStatus
+	ID        int64
+	Available bool
 }

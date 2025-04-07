@@ -64,6 +64,7 @@ func (b *Booking) MakeBooking(ctx context.Context, ticketID models.TicketID, use
 	return nil
 }
 
+// Будет методом ticket service
 func (b *Booking) ReserveTicket(ctx context.Context, ticketID models.TicketID) error {
 
 	availability, err := b.RepositoryTicket.GetAvailability(ctx, ticketID)

@@ -3,11 +3,12 @@ package http
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"time"
 
-	"github.com/LAshinCHE/ticket_booking_service/internal/models"
+	"github.com/LAshinCHE/ticket_booking_service/booking-service/internal/models"
 )
 
 //go:generate mockgen -package http -source=http.go -destination http_mocks.go
@@ -24,6 +25,7 @@ func MustRun(ctx context.Context, shutdownDur time.Duration, addr string, app bo
 	}
 
 	mux := http.NewServeMux()
+	mux.HandleFunc("/", handler.Hello) // Changed to HandleFunc
 	mux.HandleFunc("/booking", handler.GetBookingByID)
 
 	server := &http.Server{
@@ -47,8 +49,13 @@ func MustRun(ctx context.Context, shutdownDur time.Duration, addr string, app bo
 	}
 }
 
-func (h *Handler) GetBookingByID(writer http.ResponseWriter, request *http.Request) {
+func (h *Handler) Hello(writer http.ResponseWriter, request *http.Request) {
+	writer.Write([]byte("hello"))
+}
 
+func (h *Handler) GetBookingByID(writer http.ResponseWriter, request *http.Request) {
+	fmt.Println("GetBookingByID func handler")
+	// Implementation here
 }
 
 type Handler struct {

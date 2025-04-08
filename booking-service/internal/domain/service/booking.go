@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/LAshinCHE/ticket_booking_service/internal/models"
+	"github.com/LAshinCHE/ticket_booking_service/booking-service/internal/models"
 )
 
 type RepositoryBooking interface {

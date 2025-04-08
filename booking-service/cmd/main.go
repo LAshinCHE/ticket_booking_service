@@ -7,14 +7,14 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/LAshinCHE/ticket_booking_service/cmd/internal"
-	internalhttp "github.com/LAshinCHE/ticket_booking_service/internal/api/http"
-	"github.com/LAshinCHE/ticket_booking_service/internal/domain/service"
-	"github.com/LAshinCHE/ticket_booking_service/internal/repository"
+	"github.com/LAshinCHE/ticket_booking_service/booking-service/cmd/internal"
+	internalhttp "github.com/LAshinCHE/ticket_booking_service/booking-service/internal/api/http"
+	"github.com/LAshinCHE/ticket_booking_service/booking-service/internal/domain/service"
+	"github.com/LAshinCHE/ticket_booking_service/booking-service/internal/repository"
 )
 
 const (
-	applicationPort = ":8099"
+	applicationPort = ":8080"
 
 	watchDuration    = 3 * time.Second
 	shutdownDuration = 5 * time.Second

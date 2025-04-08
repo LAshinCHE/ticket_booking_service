@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/LAshinCHE/ticket_booking_service/internal/models"
-	"github.com/LAshinCHE/ticket_booking_service/internal/repository/schemas"
+	"github.com/LAshinCHE/ticket_booking_service/booking-service/internal/models"
+	"github.com/LAshinCHE/ticket_booking_service/booking-service/internal/repository/schemas"
 	"github.com/georgysavva/scany/v2/pgxscan"
 	"github.com/jackc/pgx/v5/pgxpool"
 

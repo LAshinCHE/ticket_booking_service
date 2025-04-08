@@ -1,11 +1,10 @@
-module github.com/LAshinCHE/ticket_booking_service
+module github.com/LAshinCHE/ticket_booking_service/booking-service
 
 go 1.24.1
 
 require (
 	github.com/Masterminds/squirrel v1.5.4
 	github.com/georgysavva/scany/v2 v2.1.4
-	github.com/go-chi/chi/v5 v5.2.1
 	github.com/jackc/pgx/v5 v5.7.4
 )
 

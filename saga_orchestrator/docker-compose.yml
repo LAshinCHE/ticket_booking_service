@@ -1,0 +1,58 @@
+version: "3.8"
+
+services:
+  # Temporal Server
+  temporal:
+    image: temporalio/auto-setup:1.22
+    container_name: temporal
+    ports:
+      - "7233:7233" # gRPC API
+    environment:
+      - DB=postgresql
+      - DB_PORT=5432
+      - POSTGRES_USER=temporal
+      - POSTGRES_PWD=temporal
+      - POSTGRES_SEEDS=temporal-db
+      - TEMPORAL_ADDRESS=0.0.0.0:7233
+    depends_on:
+      - temporal-db
+
+  # Temporal Web UI
+  temporal-web:
+    image: temporalio/web:latest
+    container_name: temporal-web
+    ports:
+      - "8088:8088"
+    environment:
+      - TEMPORAL_GRPC_ENDPOINT=temporal:7233
+      - TEMPORAL_PERMIT_WRITE_API=true
+    depends_on:
+      - temporal
+
+  # Postgres DB for Temporal
+  temporal-db:
+    image: postgres:13
+    container_name: temporal-db
+    environment:
+      POSTGRES_USER: temporal
+      POSTGRES_PASSWORD: temporal
+      POSTGRES_DB: temporal
+    ports:
+      - "5432:5432"
+    volumes:
+      - temporal_pgdata:/var/lib/postgresql/data
+
+  # Saga-service (worker)
+  saga-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: saga-service
+    depends_on:
+      - temporal
+    environment:
+      - TEMPORAL_ADDRESS=temporal:7233
+    restart: on-failure
+
+volumes:
+  temporal_pgdata:

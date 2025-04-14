@@ -5,6 +5,7 @@ import "database/sql"
 type (
 	BookingID int64
 	UserID    int64
+	TicketID  int64
 )
 
 type BookingStatus string

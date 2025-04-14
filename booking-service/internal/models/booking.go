@@ -1,7 +1,5 @@
 package models
 
-import "database/sql"
-
 type (
 	BookingID int64
 	UserID    int64
@@ -18,17 +16,10 @@ const (
 )
 
 type Booking struct {
-	ID      BookingID
-	UserID  UserID
-	Tikcets TicketID
+	ID      int64
+	UserID  int64
+	Tikcets int64
 	Status  BookingStatus
-}
-
-func GetUserID(userID sql.NullInt64) UserID {
-	if userID.Valid {
-		return UserID(userID.Int64)
-	}
-	return 0
 }
 
 func MapBookingStatus(status string) BookingStatus {

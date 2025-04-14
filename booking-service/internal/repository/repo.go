@@ -112,11 +112,16 @@ func (r *Repository) CheckTicketIsBooked(ctx context.Context, ticketID models.Ti
 	return !exists, nil
 }
 
+// create booking postgrace query
+func (r *Repository) CreateBooking(ctx context.Context, booking *models.Booking) (int64, error) {
+	return 0, nil
+}
+
 func ToDomainBooking(booking schemas.Booking) *models.Booking {
 	return &models.Booking{
-		ID:      models.BookingID(booking.ID),
-		UserID:  models.GetUserID(booking.UserID),
-		Tikcets: models.TicketID(booking.TicketID),
+		ID:      booking.ID,
+		UserID:  booking.UserID.Int64,
+		Tikcets: booking.TicketID,
 		Status:  models.MapBookingStatus(booking.Status),
 	}
 }

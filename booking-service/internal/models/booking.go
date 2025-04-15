@@ -1,9 +1,11 @@
 package models
 
+import "github.com/google/uuid"
+
 type (
-	BookingID int64
-	UserID    int64
-	TicketID  int64
+	BookingID uuid.UUID
+	UserID    uuid.UUID
+	TicketID  uuid.UUID
 )
 
 type BookingStatus string
@@ -16,9 +18,9 @@ const (
 )
 
 type Booking struct {
-	ID      int64
-	UserID  int64
-	Tikcets int64
+	ID      uuid.UUID
+	UserID  uuid.UUID
+	Tikcets uuid.UUID
 	Status  BookingStatus
 }
 

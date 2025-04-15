@@ -20,6 +20,13 @@ const (
 	shutdownDuration = 5 * time.Second
 )
 
+// @title Booking Service API
+// @version 1.0
+// @description API для сервиса бронирования
+
+// @host localhost:8080
+// @BasePath /
+
 func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
 	defer cancel()
@@ -37,21 +44,5 @@ func main() {
 	})
 
 	internalhttp.MustRun(ctx, shutdownDuration, applicationPort, bookingService)
-
-	//imdb - базовая реализация по кешам включающая в себя два поля мапку и лог
-	// telegramClient := client.NewTelegram()
-	// slackClient := client.NewSlack()
-	// whatsappClient := client.NewWhatsapp()
-	// contactsClient := client.NewContacts(ctx)
-
-	// contactService := contact.NewNotificationPosition(contactsClient, positionIMDB)
-
-	// notifiers := notification.New(telegramClient, slackClient, whatsappClient)
-	// leClient := client.NewLeaderElectioneer()
-
-	// positionWatcher := watcher.NewPositionWatcher(watchDuration, positionIMDB, notifiers, leClient)
-	// go positionWatcher.Run(ctx)
-
-	// internalhttp.MustRun(ctx, shutdownDuration, applicationPort, positionIMDB)
 
 }

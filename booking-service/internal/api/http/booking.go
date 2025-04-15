@@ -3,34 +3,40 @@ package http
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log"
 	"net/http"
 	"time"
 
+	_ "github.com/LAshinCHE/ticket_booking_service/booking-service/docs"
+	"github.com/LAshinCHE/ticket_booking_service/booking-service/internal/api/http/types"
 	"github.com/LAshinCHE/ticket_booking_service/booking-service/internal/models"
+	"github.com/google/uuid"
+	"github.com/gorilla/mux"
+	httpSwagger "github.com/swaggo/http-swagger"
 )
 
 //go:generate mockgen -package http -source=http.go -destination http_mocks.go
 type (
-	booking interface {
-		CheckTicketIsBooking(ctx context.Context, ticketID models.TicketID) (bool, error)
-		GetBookingByID(ctx context.Context, id models.BookingID) (*models.Booking, error)
+	service interface {
+		CheckTicketIsBooking(ctx context.Context, ticketID uuid.UUID) (bool, error)
+		GetBookingByID(ctx context.Context, id uuid.UUID) (*models.Booking, error)
 	}
 )
 
-func MustRun(ctx context.Context, shutdownDur time.Duration, addr string, app booking) {
+func MustRun(ctx context.Context, shutdownDur time.Duration, addr string, app service) {
 	handler := &Handler{
-		booking: app,
+		service: app,
 	}
 
-	mux := http.NewServeMux()
-	mux.HandleFunc("/", handler.Hello) // Changed to HandleFunc
-	mux.HandleFunc("/booking", handler.GetBookingByID)
+	// mux := http.NewServeMux()
+	r := mux.NewRouter()
+	r.HandleFunc("/", handler.HealthCheck).Methods("GET")
+	r.PathPrefix("/swagger/").Handler(httpSwagger.WrapHandler)
+	r.HandleFunc("/booking/{booking_id}", handler.GetBookingByIDHandler).Methods("GET")
 
 	server := &http.Server{
 		Addr:    addr,
-		Handler: mux,
+		Handler: r,
 	}
 
 	go func() {
@@ -49,17 +55,52 @@ func MustRun(ctx context.Context, shutdownDur time.Duration, addr string, app bo
 	}
 }
 
-func (h *Handler) Hello(writer http.ResponseWriter, request *http.Request) {
+// HealthCheck godoc
+// @Summary Health check
+// @Description Проверка доступности сервиса
+// @Tags health
+// @Produce plain
+// @Success 200 {string} string "hello"
+// @Router / [get]
+func (h *Handler) HealthCheck(writer http.ResponseWriter, request *http.Request) {
 	writer.Write([]byte("hello"))
 }
 
-func (h *Handler) GetBookingByID(writer http.ResponseWriter, request *http.Request) {
-	fmt.Println("GetBookingByID func handler")
-	// Implementation here
+// GetBookingByIDHandler godoc
+// @Summary Получить бронь по ID
+// @Description Возвращает информацию о бронировании
+// @Tags booking
+// @Produce json
+// @Param booking_id path string true "Booking ID"
+// @Success 200 {object} types.GetBookingByIDHandlerResponse
+// @Failure 400 {string} string "bad request"
+// @Failure 500 {string} string "internal server error"
+// @Router /booking/{booking_id} [get]
+func (h *Handler) GetBookingByIDHandler(writer http.ResponseWriter, request *http.Request) {
+	uuid, err := types.GetBookingByID(request)
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusBadRequest)
+	}
+
+	booking, err := h.service.GetBookingByID(request.Context(), uuid)
+
+	types.ProcessError(writer, err, &types.GetBookingByIDHandlerResponse{Booking: booking})
 }
 
+// func (h *Handler) CreateBookingHandler(writer http.ResponseWriter, request *http.Request) {
+// 	uuid, err := types.CreateBooking(request)
+// 	if err != nil {
+// 		http.Error(writer, err.Error(), http.StatusBadRequest)
+// 	}
+
+// 	booking, err := h.service.GetBookingByID(request.Context(), uuid)
+
+// 	types.ProcessError(writer, err, &types.GetBookingByIDHandlerResponse{Booking: booking})
+
+// }
+
 type Handler struct {
-	booking booking
+	service service
 }
 
 var internalServerError = errors.New("internal server error")

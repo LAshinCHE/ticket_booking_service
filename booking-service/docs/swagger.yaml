@@ -1,0 +1,83 @@
+basePath: /
+definitions:
+  models.Booking:
+    properties:
+      id:
+        type: string
+      status:
+        $ref: '#/definitions/models.BookingStatus'
+      tikcets:
+        type: string
+      userID:
+        type: string
+    type: object
+  models.BookingStatus:
+    enum:
+    - draft
+    - reserved
+    - paid
+    - canceled
+    type: string
+    x-enum-comments:
+      BookingStatusCanceled: Отменено
+      BookingStatusDraft: Черновик брони
+      BookingStatusPaid: Оплачено
+      BookingStatusReserved: Забронировано, но не оплачено
+    x-enum-varnames:
+    - BookingStatusDraft
+    - BookingStatusReserved
+    - BookingStatusPaid
+    - BookingStatusCanceled
+  types.GetBookingByIDHandlerResponse:
+    properties:
+      booking:
+        $ref: '#/definitions/models.Booking'
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: API для сервиса бронирования
+  title: Booking Service API
+  version: "1.0"
+paths:
+  /:
+    get:
+      description: Проверка доступности сервиса
+      produces:
+      - text/plain
+      responses:
+        "200":
+          description: hello
+          schema:
+            type: string
+      summary: Health check
+      tags:
+      - health
+  /booking/{booking_id}:
+    get:
+      description: Возвращает информацию о бронировании
+      parameters:
+      - description: Booking ID
+        in: path
+        name: booking_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.GetBookingByIDHandlerResponse'
+        "400":
+          description: bad request
+          schema:
+            type: string
+        "500":
+          description: internal server error
+          schema:
+            type: string
+      summary: Получить бронь по ID
+      tags:
+      - booking
+swagger: "2.0"

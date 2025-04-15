@@ -7,6 +7,7 @@ import (
 	"github.com/LAshinCHE/ticket_booking_service/booking-service/internal/models"
 	"github.com/LAshinCHE/ticket_booking_service/booking-service/internal/repository/schemas"
 	"github.com/georgysavva/scany/v2/pgxscan"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	sq "github.com/Masterminds/squirrel"
@@ -32,7 +33,7 @@ func NewRepository(driver *pgxpool.Pool) *Repository {
 	}
 }
 
-func (r *Repository) GetBookingByID(ctx context.Context, bookingID models.BookingID) (*models.Booking, error) {
+func (r *Repository) GetBookingByID(ctx context.Context, bookingID uuid.UUID) (*models.Booking, error) {
 	query := sq.Select(bookingColumns...).
 		From(bookingTable).
 		Where("id = $1", bookingID).PlaceholderFormat(sq.Dollar)
@@ -51,7 +52,7 @@ func (r *Repository) GetBookingByID(ctx context.Context, bookingID models.Bookin
 	return ToDomainBooking(booking), nil
 }
 
-func (r *Repository) GetAvailability(ctx context.Context, ticketID models.TicketID) (bool, error) {
+func (r *Repository) GetAvailability(ctx context.Context, ticketID uuid.UUID) (bool, error) {
 	query := sq.Select(ticketColumns...).
 		From(ticketTable).
 		Where("id = $1", ticketID).PlaceholderFormat(sq.Dollar)
@@ -70,7 +71,7 @@ func (r *Repository) GetAvailability(ctx context.Context, ticketID models.Ticket
 	return ticket.Available, nil
 }
 
-func (r *Repository) MakeaAvailable(ctx context.Context, ticketID models.TicketID) error {
+func (r *Repository) MakeaAvailable(ctx context.Context, ticketID uuid.UUID) error {
 	query := sq.Update(ticketTable).
 		Set("available", true).
 		Where("id = $1", ticketID).
@@ -95,7 +96,7 @@ func (r *Repository) MakeaAvailable(ctx context.Context, ticketID models.TicketI
 	return nil
 }
 
-func (r *Repository) CheckTicketIsBooked(ctx context.Context, ticketID models.TicketID) (bool, error) {
+func (r *Repository) CheckTicketIsBooked(ctx context.Context, ticketID uuid.UUID) (bool, error) {
 	var exists bool
 
 	query := `
@@ -118,10 +119,15 @@ func (r *Repository) CreateBooking(ctx context.Context, booking *models.Booking)
 }
 
 func ToDomainBooking(booking schemas.Booking) *models.Booking {
+
+	userID, _ := uuid.Parse(booking.UserID.UUID.String())
+	ticketID, _ := uuid.Parse(booking.TicketID)
+	id, _ := uuid.Parse(booking.ID)
+
 	return &models.Booking{
-		ID:      booking.ID,
-		UserID:  booking.UserID.Int64,
-		Tikcets: booking.TicketID,
+		ID:      id,
+		UserID:  userID,
+		Tikcets: ticketID,
 		Status:  models.MapBookingStatus(booking.Status),
 	}
 }

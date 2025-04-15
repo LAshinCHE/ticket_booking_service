@@ -120,14 +120,10 @@ func (r *Repository) CreateBooking(ctx context.Context, booking *models.Booking)
 
 func ToDomainBooking(booking schemas.Booking) *models.Booking {
 
-	userID, _ := uuid.Parse(booking.UserID.UUID.String())
-	ticketID, _ := uuid.Parse(booking.TicketID)
-	id, _ := uuid.Parse(booking.ID)
-
 	return &models.Booking{
-		ID:      id,
-		UserID:  userID,
-		Tikcets: ticketID,
+		ID:      booking.ID,
+		UserID:  booking.UserID,
+		Tikcets: booking.TicketID,
 		Status:  models.MapBookingStatus(booking.Status),
 	}
 }

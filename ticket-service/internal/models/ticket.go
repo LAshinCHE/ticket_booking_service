@@ -15,5 +15,6 @@ const (
 
 type Ticket struct {
 	ID        int64
+	Price     float64
 	Available bool
 }

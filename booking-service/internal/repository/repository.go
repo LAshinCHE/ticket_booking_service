@@ -2,7 +2,6 @@ package repository
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/LAshinCHE/ticket_booking_service/booking-service/internal/models"
 	"github.com/LAshinCHE/ticket_booking_service/booking-service/internal/repository/schemas"
@@ -15,12 +14,10 @@ import (
 
 const (
 	bookingTable = "booking"
-	ticketTable  = "ticket"
 )
 
 var (
 	bookingColumns = []string{"id", "user_id", "ticket_id", "status", "created_at", "updated_at"}
-	ticketColumns  = []string{"id", "event_id", "price", "seat", "avaible"}
 )
 
 type Repository struct {
@@ -50,50 +47,6 @@ func (r *Repository) GetBookingByID(ctx context.Context, bookingID uuid.UUID) (*
 	}
 
 	return ToDomainBooking(booking), nil
-}
-
-func (r *Repository) GetAvailability(ctx context.Context, ticketID uuid.UUID) (bool, error) {
-	query := sq.Select(ticketColumns...).
-		From(ticketTable).
-		Where("id = $1", ticketID).PlaceholderFormat(sq.Dollar)
-
-	rawQuery, args, err := query.ToSql()
-	if err != nil {
-		return false, err
-	}
-
-	var ticket schemas.Ticket
-
-	if err := pgxscan.Select(ctx, r.db, &ticket, rawQuery, args...); err != nil {
-		return false, err
-	}
-
-	return ticket.Available, nil
-}
-
-func (r *Repository) MakeaAvailable(ctx context.Context, ticketID uuid.UUID) error {
-	query := sq.Update(ticketTable).
-		Set("available", true).
-		Where("id = $1", ticketID).
-		PlaceholderFormat(sq.Dollar)
-
-	rawQuery, args, err := query.ToSql()
-	if err != nil {
-		return err
-	}
-
-	result, err := r.db.Exec(ctx, rawQuery, args...)
-	if err != nil {
-		return fmt.Errorf("failed to execute query: %w", err)
-	}
-
-	rowsAffected := result.RowsAffected()
-
-	if rowsAffected == 0 {
-		return fmt.Errorf("ticket with id %d not found", ticketID)
-	}
-
-	return nil
 }
 
 func (r *Repository) CheckTicketIsBooked(ctx context.Context, ticketID uuid.UUID) (bool, error) {

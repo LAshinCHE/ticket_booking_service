@@ -2,13 +2,13 @@ services:
   booking-service:
     build: ./
     ports:
-      - "8081:8080"
+      - "8080:8080"
     depends_on:
       postgres:
         condition: service_healthy
     environment:
       DB_HOST: postgres
-      DB_PORT: 5432
+      DB_PORT: 5430
       DB_USER: postgres
       DB_PASSWORD: password
       DB_NAME: booking_db
@@ -24,7 +24,7 @@ services:
       POSTGRES_PASSWORD: password
       POSTGRES_DB: booking_db
     ports:
-      - "5430:5432"
+      - "5430:5430"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:

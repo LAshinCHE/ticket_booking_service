@@ -1,7 +1,9 @@
 package schemas
 
+import "github.com/google/uuid"
+
 type Ticket struct {
-	ID        int64   `db:"id"`
-	Price     float64 `db:"price"`
-	Available bool    `db:"available"`
+	ID        uuid.UUID `db:"id"`
+	Price     float64   `db:"price"`
+	Available bool      `db:"available"`
 }

@@ -1,8 +1,6 @@
 package models
 
-type (
-	TicketID int64
-)
+import "github.com/google/uuid"
 
 type TicketStatus string
 
@@ -14,7 +12,7 @@ const (
 )
 
 type Ticket struct {
-	ID        int64
+	ID        uuid.UUID
 	Price     float64
 	Available bool
 }

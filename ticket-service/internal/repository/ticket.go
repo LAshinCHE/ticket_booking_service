@@ -14,11 +14,11 @@ import (
 )
 
 const (
-	ticketTable = "ticket"
+	ticketTable = "tickets"
 )
 
 var (
-	ticketColumns = []string{"id", "price", "avaible"}
+	ticketColumns = []string{"id", "price", "available"}
 )
 
 type Repository struct {
@@ -62,8 +62,8 @@ func (r *Repository) GetTicket(ctx context.Context, ticketID uuid.UUID) (*models
 
 	var ticket schemas.Ticket
 
-	if err := pgxscan.Select(ctx, r.db, &ticket, rawQuery, args...); err != nil {
-		return nil, err
+	if err := pgxscan.Get(ctx, r.db, &ticket, rawQuery, args...); err != nil {
+		return nil, fmt.Errorf("ticket with id %v not found, with error: %v ", args, err)
 	}
 
 	return ToDomainTicket(ticket), nil
@@ -89,6 +89,24 @@ func (r *Repository) MakeaAvailable(ctx context.Context, ticketID uuid.UUID) err
 
 	if rowsAffected == 0 {
 		return fmt.Errorf("ticket with id %d not found", ticketID)
+	}
+
+	return nil
+}
+
+func (r *Repository) CreateTicket(ctx context.Context, ticket models.Ticket) error {
+	query := sq.Insert(ticketTable).
+		Columns(ticketColumns...).
+		Values(ticket.ID, ticket.Price, ticket.Available).
+		PlaceholderFormat(sq.Dollar)
+
+	rawQuery, args, err := query.ToSql()
+	if err != nil {
+		return fmt.Errorf("failed to build query: %w", err)
+	}
+	_, err = r.db.Exec(ctx, rawQuery, args...)
+	if err != nil {
+		return fmt.Errorf("failed to execute insert: %w", err)
 	}
 
 	return nil

@@ -16,3 +16,7 @@ type Ticket struct {
 	Price     float64
 	Available bool
 }
+
+type TicketModelParamRequest struct {
+	Price float64 `json:"price"`
+}

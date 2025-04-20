@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/LAshinCHE/ticket_booking_service/ticket-service/internal/models"
 	"github.com/google/uuid"
@@ -12,6 +13,7 @@ type RepositoryTicket interface {
 	MakeaAvailable(ctx context.Context, id uuid.UUID) error
 	GetAvailability(ctx context.Context, ticketID uuid.UUID) (bool, error)
 	GetTicket(ctx context.Context, ticketID uuid.UUID) (*models.Ticket, error)
+	CreateTicket(ctx context.Context, ticket models.Ticket) error
 }
 
 type Deps struct {
@@ -29,6 +31,7 @@ func NewBookingService(d Deps) *Ticket {
 }
 
 func (t *Ticket) GetTicket(ctx context.Context, ticketID uuid.UUID) (*models.Ticket, error) {
+	fmt.Printf("ticket uuid %v \n", ticketID)
 	return t.RepositoryTicket.GetTicket(ctx, ticketID)
 }
 
@@ -56,4 +59,16 @@ func (t *Ticket) CheckTicket(ctx context.Context, ticketID uuid.UUID) (bool, err
 	}
 
 	return availability, nil
+}
+
+func (t *Ticket) CreateTicket(ctx context.Context, ticketParam models.TicketModelParamRequest) (uuid.UUID, error) {
+	id := uuid.New()
+	ticket := models.Ticket{
+		ID:        id,
+		Price:     ticketParam.Price,
+		Available: true,
+	}
+
+	return id, t.RepositoryTicket.CreateTicket(ctx, ticket)
+
 }

@@ -7,6 +7,7 @@ import (
 
 	"github.com/LAshinCHE/ticket_booking_service/ticket-service/internal/models"
 	"github.com/LAshinCHE/ticket_booking_service/ticket-service/internal/repository"
+	"github.com/google/uuid"
 )
 
 var (
@@ -14,11 +15,15 @@ var (
 )
 
 type GetTicketByIDHandlerResponse struct {
-	Ticket *models.Ticket
+	Ticket *models.Ticket `json:"ticket"`
+}
+
+type CreateTicketResponse struct {
+	Id uuid.UUID `json:"ticket_id"`
 }
 
 type CheckTicketHandlerResponse struct {
-	Valid bool
+	Valid bool `json:"valid"`
 }
 
 func ProcessError(w http.ResponseWriter, err error, resp any) {

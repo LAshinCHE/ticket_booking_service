@@ -21,7 +21,7 @@ const (
 	shutdownDuration = 5 * time.Second
 )
 
-// @title Booking Service API
+// @title Ticket Service API
 // @version 1.0
 // @description API для сервиса бронирования
 

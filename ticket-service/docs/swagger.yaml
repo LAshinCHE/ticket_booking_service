@@ -1,0 +1,129 @@
+definitions:
+  models.Ticket:
+    properties:
+      available:
+        type: boolean
+      id:
+        type: string
+      price:
+        type: number
+    type: object
+  models.TicketModelParamRequest:
+    properties:
+      price:
+        type: number
+    type: object
+  types.CheckTicketHandlerResponse:
+    properties:
+      valid:
+        type: boolean
+    type: object
+  types.CreateTicketResponse:
+    properties:
+      ticket_id:
+        type: string
+    type: object
+  types.GetTicketByIDHandlerResponse:
+    properties:
+      ticket:
+        $ref: '#/definitions/models.Ticket'
+    type: object
+info:
+  contact: {}
+paths:
+  /:
+    get:
+      description: Возвращает простое сообщение
+      responses:
+        "200":
+          description: Hello
+          schema:
+            type: string
+      summary: Проверка здоровья сервиса
+      tags:
+      - health
+  /ticket/:
+    post:
+      consumes:
+      - application/json
+      description: Создает новый билет по переданным параметрам
+      parameters:
+      - description: Данные билета
+        in: body
+        name: ticket
+        required: true
+        schema:
+          $ref: '#/definitions/models.TicketModelParamRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.CreateTicketResponse'
+        "400":
+          description: bad request
+          schema:
+            type: string
+        "500":
+          description: internal error
+          schema:
+            type: string
+      summary: Создает новый билет
+      tags:
+      - ticket
+  /ticket/{ticket_id}:
+    get:
+      description: Получает билет по UUID
+      parameters:
+      - description: Ticket UUID
+        in: path
+        name: ticket_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.GetTicketByIDHandlerResponse'
+        "400":
+          description: bad request
+          schema:
+            type: string
+        "500":
+          description: internal error
+          schema:
+            type: string
+      summary: Получение информации о билете
+      tags:
+      - ticket
+  /ticket/check/{ticket_id}:
+    get:
+      description: Проверяет доступность билета
+      parameters:
+      - description: Ticket UUID
+        in: path
+        name: ticket_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.CheckTicketHandlerResponse'
+        "400":
+          description: bad request
+          schema:
+            type: string
+        "500":
+          description: internal error
+          schema:
+            type: string
+      summary: Проверка валидности билета
+      tags:
+      - ticket
+swagger: "2.0"

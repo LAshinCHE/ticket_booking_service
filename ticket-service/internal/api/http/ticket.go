@@ -6,13 +6,14 @@ import (
 	"net/http"
 	"time"
 
-	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 
 	_ "github.com/LAshinCHE/ticket_booking_service/ticket-service/docs"
 	"github.com/LAshinCHE/ticket_booking_service/ticket-service/internal/api/http/types"
 	"github.com/LAshinCHE/ticket_booking_service/ticket-service/internal/models"
-	"github.com/LAshinCHE/ticket_booking_service/ticket-service/internal/tracing"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	httpSwagger "github.com/swaggo/http-swagger"
@@ -30,22 +31,19 @@ func MustRun(ctx context.Context, shutdownDur time.Duration, addr string, app se
 		service: app,
 	}
 
-	tp, err := tracing.InitTracer(ctx, "ticket-service")
-	if err != nil {
-		log.Fatalf("failed to initialize tracer: %v", err)
-	}
-
 	r := mux.NewRouter()
+
+	r.Use(otelmux.Middleware("ticket-service"))
+
 	r.HandleFunc("/", handler.HealthCheck).Methods("GET")
 	r.PathPrefix("/swagger/").Handler(httpSwagger.WrapHandler)
 	r.HandleFunc("/ticket/{ticket_id}", handler.GetTicketByIDHandler).Methods("GET")
 	r.HandleFunc("/ticket/check/{ticket_id}", handler.CheckTicketHandler).Methods("GET")
 	r.HandleFunc("/ticket/", handler.CreateTicketHandler).Methods("POST")
 
-	otelRouter := otelhttp.NewHandler(r, "http-server")
 	server := http.Server{
 		Addr:    addr,
-		Handler: otelRouter,
+		Handler: r,
 	}
 
 	go func() {
@@ -53,10 +51,6 @@ func MustRun(ctx context.Context, shutdownDur time.Duration, addr string, app se
 
 		log.Printf("Shuting down server with duration %0.3fs", shutdownDur.Seconds())
 		<-time.After(shutdownDur)
-
-		if err := tp.Shutdown(ctx); err != nil {
-			log.Printf("Error shutting down tracer provider: %v", err)
-		}
 
 		if err := server.Shutdown(context.Background()); err != nil {
 			log.Fatalf("Http handler Shutdown: %s", err)
@@ -110,17 +104,23 @@ func (h *Handler) CheckTicketHandler(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {string} string "internal error"
 // @Router /ticket/{ticket_id} [get]
 func (h *Handler) GetTicketByIDHandler(w http.ResponseWriter, r *http.Request) {
-	tr := otel.Tracer("ticket-service")
-	ctx, span := tr.Start(r.Context(), "GetTicketByIDHandler")
+	ctx, span := otel.Tracer("ticket-service").Start(r.Context(), "GetTicketByIDHandler")
 	defer span.End()
 
 	ticketID, err := types.GetTicketIDRequest(r)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "invalid ticket ID")
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	span.SetAttributes(attribute.String("ticket.id", ticketID.String()))
 
 	ticket, err := h.service.GetTicket(ctx, ticketID)
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "failed to get ticket")
+	}
 	types.ProcessError(w, err, &types.GetTicketByIDHandlerResponse{Ticket: ticket})
 }
 
@@ -136,8 +136,7 @@ func (h *Handler) GetTicketByIDHandler(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {string} string "internal error"
 // @Router /ticket/ [post]
 func (h *Handler) CreateTicketHandler(w http.ResponseWriter, r *http.Request) {
-	tr := otel.Tracer("ticket-service")
-	ctx, span := tr.Start(r.Context(), "CreateTicketHandler")
+	ctx, span := otel.Tracer("ticket-service").Start(r.Context(), "GetTicketByIDHandler")
 	defer span.End()
 
 	params, err := types.CreateTicketRequest(r)
@@ -146,8 +145,9 @@ func (h *Handler) CreateTicketHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id, err := h.service.CreateTicket(ctx, params)
-	types.ProcessError(w, err, &types.CreateTicketResponse{Id: id})
+	ticketID, err := h.service.CreateTicket(ctx, params)
+	span.SetAttributes(attribute.String("ticket.id", ticketID.String()))
+	types.ProcessError(w, err, &types.CreateTicketResponse{Id: ticketID})
 }
 
 type Handler struct {

@@ -34,8 +34,8 @@ services:
   jaeger:
     image: jaegertracing/all-in-one:1.53
     ports:
-      - "16686:16686" 
-      - "4318:4318"    
+      - "16686:16686"  # UI
+      - "4318:4318"    # OTLP HTTP
 
 volumes:
   pgdata:

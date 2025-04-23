@@ -3,10 +3,11 @@ package service
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"github.com/LAshinCHE/ticket_booking_service/ticket-service/internal/models"
 	"github.com/google/uuid"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 )
 
 type RepositoryTicket interface {
@@ -31,7 +32,11 @@ func NewBookingService(d Deps) *Ticket {
 }
 
 func (t *Ticket) GetTicket(ctx context.Context, ticketID uuid.UUID) (*models.Ticket, error) {
-	fmt.Printf("ticket uuid %v \n", ticketID)
+	ctx, span := otel.Tracer("ticket-service").Start(ctx, "service.GetTicket")
+	defer span.End()
+
+	span.SetAttributes(attribute.String("ticket.id", ticketID.String()))
+
 	return t.RepositoryTicket.GetTicket(ctx, ticketID)
 }
 

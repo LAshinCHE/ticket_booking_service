@@ -9,6 +9,9 @@ import (
 	"github.com/georgysavva/scany/v2/pgxscan"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 
 	sq "github.com/Masterminds/squirrel"
 )
@@ -51,21 +54,31 @@ func (r *Repository) GetAvailability(ctx context.Context, ticketID uuid.UUID) (b
 }
 
 func (r *Repository) GetTicket(ctx context.Context, ticketID uuid.UUID) (*models.Ticket, error) {
+	ctx, span := otel.Tracer("ticket-service").Start(ctx, "repo.GetTicket")
+	defer span.End()
+
+	span.SetAttributes(attribute.String("ticket.id", ticketID.String()))
+
 	query := sq.Select(ticketColumns...).
 		From(ticketTable).
-		Where("id = $1", ticketID).PlaceholderFormat(sq.Dollar)
+		Where("id = $1", ticketID).
+		PlaceholderFormat(sq.Dollar)
 
 	rawQuery, args, err := query.ToSql()
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "failed to build SQL query")
 		return nil, err
 	}
 
 	var ticket schemas.Ticket
-
 	if err := pgxscan.Get(ctx, r.db, &ticket, rawQuery, args...); err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "ticket not found or db error")
 		return nil, fmt.Errorf("ticket with id %v not found, with error: %v ", args, err)
 	}
 
+	span.SetStatus(codes.Ok, "ticket successfully retrieved")
 	return ToDomainTicket(ticket), nil
 }
 

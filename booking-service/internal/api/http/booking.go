@@ -33,6 +33,7 @@ func MustRun(ctx context.Context, shutdownDur time.Duration, addr string, app se
 	r.HandleFunc("/", handler.HealthCheck).Methods("GET")
 	r.PathPrefix("/swagger/").Handler(httpSwagger.WrapHandler)
 	r.HandleFunc("/booking/{booking_id}", handler.GetBookingByIDHandler).Methods("GET")
+	// TODO: /booking/{booking_id}/check
 
 	server := &http.Server{
 		Addr:    addr,

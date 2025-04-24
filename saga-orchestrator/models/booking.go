@@ -1,10 +1,8 @@
 package models
 
-type UserID int64
-type TicketID int64
-
-type BookingSagaParams struct {
-	ID       UserID
-	TicketID TicketID
+type BookingParams struct {
+	ID       int64
+	UserID   int64
+	TicketID int64
 	Amount   float64
 }

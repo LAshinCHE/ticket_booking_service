@@ -3,16 +3,18 @@ package activities
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/LAshinCHE/ticket_booking_service/saga-orchestrator/clients"
 	"github.com/LAshinCHE/ticket_booking_service/saga-orchestrator/models"
 )
 
-func ReserveTicketActivity(ctx context.Context, params models.BookingSagaParams) error {
-	// Пример вызова ticket-service через HTTP или gRPC
-	ok, err := clients.BookingClient.Reserve(params.ID)
-	if err != nil || !ok {
-		return fmt.Errorf("не удалось зарезервировать билет: %w", err)
+func CheckBookingActivity(ctx context.Context, params models.BookingParams) error {
+	bookingClient := clients.NewBookingClient(os.Getenv("BOOKING_ADDRES"))
+	err := bookingClient.CheckBooking(ctx, params.ID)
+	if err != nil {
+		return fmt.Errorf("CheckBookingActivity failed: %w", err)
 	}
+
 	return nil
 }

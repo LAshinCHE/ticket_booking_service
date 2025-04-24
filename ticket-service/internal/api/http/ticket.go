@@ -37,9 +37,10 @@ func MustRun(ctx context.Context, shutdownDur time.Duration, addr string, app se
 
 	r.HandleFunc("/", handler.HealthCheck).Methods("GET")
 	r.PathPrefix("/swagger/").Handler(httpSwagger.WrapHandler)
+	r.HandleFunc("/ticket/", handler.CreateTicketHandler).Methods("POST")
 	r.HandleFunc("/ticket/{ticket_id}", handler.GetTicketByIDHandler).Methods("GET")
 	r.HandleFunc("/ticket/check/{ticket_id}", handler.CheckTicketHandler).Methods("GET")
-	r.HandleFunc("/ticket/", handler.CreateTicketHandler).Methods("POST")
+	//r.HandleFunc("/ticket/{id}/reserve")
 
 	server := http.Server{
 		Addr:    addr,

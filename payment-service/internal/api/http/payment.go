@@ -18,6 +18,9 @@ func MustRun(ctx context.Context, app service, addr string, shutdownDur time.Dur
 
 	r := mux.NewRouter()
 	r.HandleFunc("/health-check/", h.HealthCheck).Methods("GET")
+	r.HandleFunc("/payments/charge/", h.DebitFromBalance).Methods("POST")
+	r.HandleFunc("/payments/refund/", h.RefundToBalance).Methods("POST")
+	r.HandleFunc("/accounts/{user_id}/balance/", h.GetBalance).Methods("GET")
 	// прописать route
 
 	server := http.Server{
@@ -43,6 +46,18 @@ func MustRun(ctx context.Context, app service, addr string, shutdownDur time.Dur
 
 func (h *Handler) HealthCheck(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("hello"))
+}
+
+func (h *Handler) DebitFromBalance(w http.ResponseWriter, r *http.Request) {
+
+}
+
+func (h *Handler) RefundToBalance(w http.ResponseWriter, r *http.Request) {
+
+}
+
+func (h *Handler) GetBalance(w http.ResponseWriter, r *http.Request) {
+
 }
 
 type Handler struct {

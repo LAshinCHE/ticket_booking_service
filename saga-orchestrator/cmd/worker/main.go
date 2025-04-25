@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 
+	workflows "github.com/LAshinCHE/ticket_booking_service/saga-orchestrator/workflow"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/worker"
 )
@@ -14,9 +15,9 @@ func main() {
 	}
 
 	worker := worker.New(c, "booking-saga-task-queue", worker.Options{
-		MetricsScope: tally.NewScope("saga", nil), // метрики в Prometheus
+		MetricsScope: tally.NewScope("saga", nil),
 	})
-	worker.RegisterWorkflow(workflows.BookingSaga)
+	worker.RegisterWorkflow(workflows.BookingSagaWorkflow())
 	worker.RegisterActivity(activities.CheckAvailability /* и др. */)
 
 	log.Fatal(worker.Run(worker.InterruptCh()))

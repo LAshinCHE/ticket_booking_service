@@ -9,8 +9,20 @@ import (
 	"github.com/gorilla/mux"
 )
 
+const SagaServiceToken = "super-secure-saga-token"
+
 type GetBookingByIDHandlerResponse struct {
 	Booking *models.Booking
+}
+
+type CreateBookingInternalRequest struct {
+	BookingID string `json:"booking_id"`
+	UserID    int64  `json:"user_id"`
+	TicketID  string `json:"ticket_id"`
+}
+
+type DeleteBookingInternalRequest struct {
+	BookingID string `json:"booking_id"`
 }
 
 func GetBookingByID(r *http.Request) (uuid.UUID, error) {
@@ -26,6 +38,17 @@ func GetBookingByID(r *http.Request) (uuid.UUID, error) {
 	}
 
 	return id, nil
+}
+
+func InternalAuthMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		token := r.Header.Get("Authorization")
+		if token != SagaServiceToken {
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 func CreateBooking(r *http.Request) (models.CreateBookingData, error) {

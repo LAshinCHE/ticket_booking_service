@@ -18,16 +18,16 @@ const (
 )
 
 type Booking struct {
-	ID      uuid.UUID
-	UserID  uuid.UUID
-	Tikcets uuid.UUID
-	Status  BookingStatus
+	ID       uuid.UUID
+	UserID   int64
+	TicketID uuid.UUID
+	Status   BookingStatus
 }
 
 type CreateBookingData struct {
 	ID       uuid.UUID
-	TicketID uuid.UUID
 	UserID   int64
+	TicketID uuid.UUID
 	Price    float64
 }
 

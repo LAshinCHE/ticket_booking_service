@@ -2,6 +2,7 @@ package http
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"log"
 	"net/http"
@@ -20,6 +21,9 @@ type (
 	service interface {
 		CheckTicketIsBooking(ctx context.Context, ticketID uuid.UUID) (bool, error)
 		GetBookingByID(ctx context.Context, id uuid.UUID) (*models.Booking, error)
+		CreateBooking(ctx context.Context, req models.CreateBookingData) error
+		CreateBookingInternal(ctx context.Context, req models.Booking) error
+		DeleteBookingInternal(ctx context.Context, id uuid.UUID) error
 	}
 )
 
@@ -34,8 +38,11 @@ func MustRun(ctx context.Context, shutdownDur time.Duration, addr string, app se
 	r.PathPrefix("/swagger/").Handler(httpSwagger.WrapHandler)
 	r.HandleFunc("/booking/{booking_id}", handler.GetBookingByIDHandler).Methods("GET")
 	r.HandleFunc("/booking/", handler.CreateBookingHandler).Methods("POST")
-	r.HandleFunc("/booking/delete", handler.DeleteBooking).Methods("DELETE")
-	// TODO: /booking/{booking_id}/check
+
+	internal := r.PathPrefix("/internal").Subrouter()
+	internal.Use(types.InternalAuthMiddleware)
+	internal.HandleFunc("/booking/create", handler.CreateBookingInternalHandler).Methods("POST")
+	internal.HandleFunc("/booking/delete", handler.DeleteBookingInternalHandler).Methods("DELETE")
 
 	server := &http.Server{
 		Addr:    addr,
@@ -91,18 +98,52 @@ func (h *Handler) GetBookingByIDHandler(writer http.ResponseWriter, request *htt
 }
 
 func (h *Handler) CreateBookingHandler(writer http.ResponseWriter, request *http.Request) {
-	bookingParams, err := types.CreateBooking(request)
+	data, err := types.CreateBooking(request)
 	if err != nil {
 		http.Error(writer, err.Error(), http.StatusBadRequest)
 	}
-	bookingParams.ID = uuid.New()
 
-	types.ProcessError(writer, err, &types.GetBookingByIDHandlerResponse{Booking: booking})
+	err = h.service.CreateBooking(request.Context(), data)
 
+	types.ProcessError(writer, err, &types.GetBookingByIDHandlerResponse{})
 }
 
-func (h *Handler) DeleteBooking(writer http.ResponseWriter, request *http.Request) {
+func (h *Handler) CreateBookingInternalHandler(w http.ResponseWriter, r *http.Request) {
+	var req types.CreateBookingInternalRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request", http.StatusBadRequest)
+		return
+	}
 
+	booking := models.Booking{
+		ID:       uuid.MustParse(req.BookingID),
+		UserID:   req.UserID,
+		TicketID: uuid.MustParse(req.TicketID),
+	}
+
+	if err := h.service.CreateBookingInternal(r.Context(), booking); err != nil {
+		http.Error(w, "failed to create booking", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+func (h *Handler) DeleteBookingInternalHandler(w http.ResponseWriter, r *http.Request) {
+	var req types.DeleteBookingInternalRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request", http.StatusBadRequest)
+		return
+	}
+
+	bookingID := uuid.MustParse(req.BookingID)
+
+	if err := h.service.DeleteBookingInternal(r.Context(), bookingID); err != nil {
+		http.Error(w, "failed to create booking", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 }
 
 type Handler struct {

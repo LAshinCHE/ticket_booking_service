@@ -24,11 +24,6 @@ func BookingSagaWorkflow(ctx workflow.Context, params BookingSagaParams) error {
 	}
 	ctx = workflow.WithActivityOptions(ctx, opts)
 
-	err := workflow.ExecuteActivity(ctx, CheckBookingActivity, params).Get(ctx, nil)
-	if err != nil {
-		return err
-	}
-
 	err = workflow.ExecuteActivity(ctx, ReserveTicketActivity, params).Get(ctx, nil)
 	if err != nil {
 		_ = workflow.ExecuteActivity(ctx, CancelBookingActivity, params).Get(ctx, nil)

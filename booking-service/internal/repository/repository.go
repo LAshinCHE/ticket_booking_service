@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/LAshinCHE/ticket_booking_service/booking-service/internal/models"
 	"github.com/LAshinCHE/ticket_booking_service/booking-service/internal/repository/schemas"
@@ -66,17 +67,54 @@ func (r *Repository) CheckTicketIsBooked(ctx context.Context, ticketID uuid.UUID
 	return !exists, nil
 }
 
-// create booking postgrace query
-func (r *Repository) CreateBooking(ctx context.Context, booking *models.Booking) (int64, error) {
-	return 0, nil
+func (r *Repository) CreateBooking(ctx context.Context, booking models.Booking) error {
+	query := sq.Insert(bookingTable).
+		Columns("id", "user_id", "ticket_id").
+		Values(booking.ID, booking.UserID, booking.TicketID).
+		PlaceholderFormat(sq.Dollar)
+
+	queryString, args, err := query.ToSql()
+	if err != nil {
+		return fmt.Errorf("failed to build insert booking sql: %w", err)
+	}
+
+	_, err = r.db.Exec(ctx, queryString, args...)
+	if err != nil {
+		return fmt.Errorf("failed to execute insert booking: %w", err)
+	}
+
+	return nil
+}
+
+func (r *Repository) DeleteBookingByID(ctx context.Context, bookingID uuid.UUID) error {
+	query := sq.Delete(bookingTable).
+		Where(sq.Eq{"id": bookingID}).
+		PlaceholderFormat(sq.Dollar)
+
+	queryString, args, err := query.ToSql()
+	if err != nil {
+		return fmt.Errorf("failed to build insert booking sql: %w", err)
+	}
+
+	result, err := r.db.Exec(ctx, queryString, args...)
+	if err != nil {
+		return fmt.Errorf("failed to execute insert booking: %w", err)
+	}
+
+	rowAffected := result.RowsAffected()
+	if rowAffected == 0 {
+		return fmt.Errorf("no booking found with id: %s", bookingID)
+	}
+
+	return nil
 }
 
 func ToDomainBooking(booking schemas.Booking) *models.Booking {
 
 	return &models.Booking{
-		ID:      booking.ID,
-		UserID:  booking.UserID,
-		Tikcets: booking.TicketID,
-		Status:  models.MapBookingStatus(booking.Status),
+		ID:       booking.ID,
+		UserID:   booking.UserID,
+		TicketID: booking.TicketID,
+		Status:   models.MapBookingStatus(booking.Status),
 	}
 }

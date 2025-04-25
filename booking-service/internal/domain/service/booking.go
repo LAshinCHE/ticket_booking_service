@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/LAshinCHE/ticket_booking_service/booking-service/internal/models"
 	"github.com/google/uuid"
@@ -11,7 +12,8 @@ import (
 type RepositoryBooking interface {
 	GetBookingByID(ctx context.Context, id uuid.UUID) (*models.Booking, error)
 	CheckTicketIsBooked(ctx context.Context, ticketID uuid.UUID) (bool, error)
-	CreateBooking(ctx context.Context, booking *models.Booking) (int64, error)
+	CreateBooking(ctx context.Context, booking models.Booking) error
+	DeleteBookingByID(ctx context.Context, bookingID uuid.UUID) error
 }
 
 type SagaClient interface {
@@ -49,40 +51,22 @@ func (b *Booking) GetBookingByID(ctx context.Context, id uuid.UUID) (*models.Boo
 	return b.RepositoryBooking.GetBookingByID(ctx, id)
 }
 
-// Создает бронь (создает отправляет статус запроса в saga-service) в случае ошибки saga-service принимает решение о дальнейших действиях
-func (b *Booking) CreateBooking(ctx context.Context, req models.CreateBookingData) (int64, error) {
-	// booking := &models.Booking{
-	// 	UserID:  userID,
-	// 	Tikcets: ticketID,
-	// 	Status:  models.BookingStatusDraft,
-	// }
-
-	// bookingID, err := b.RepositoryBooking.CreateBooking(ctx, booking)
-	// if err != nil {
-	// 	return 0, err
-	// }
-
-	// err = b.SagaClient.StartBookingSaga(ctx, bookingID, userID, ticketID)
-	// if err != nil {
-	// 	return bookingID, fmt.Errorf("failed to start saga: %w", err)
-	// }
-
-	// return bookingID, nil
-	return 0, nil
+func (b *Booking) CreateBookingInternal(ctx context.Context, booking models.Booking) error {
+	booking.Status = models.BookingStatusDraft
+	return b.RepositoryBooking.CreateBooking(ctx, booking)
 }
 
-func (b *Booking) CreateBooking(ctx context.Context, ticketID models.TicketID, user_id models.UserID, price float64) error {
-	//основная ручка которая выполняет запрос сразу в несколько сервисов
-	// проверка забронирован ли у нас билет
-	// err := b.CheckTicket() // логика что билет   нас может быть забронирван кем-то другим
-	//1. Проверяет доступность билета и резервирует его
-	err := b.ReserveTicket(ctx, ticketID) // билет не доступен по каким-то другим причинам условно удален админом
-	if err != nil {
+func (b *Booking) DeleteBookingInternal(ctx context.Context, bookingID uuid.UUID) error {
+	return b.RepositoryBooking.DeleteBookingByID(ctx, bookingID)
+}
+
+func (b *Booking) CreateBooking(ctx context.Context, req models.CreateBookingData) error {
+	req.ID = uuid.New()
+
+	if err := b.SagaClient.StartBookingSaga(ctx, req); err != nil {
+		log.Printf("failed to start booking saga: %v", err)
 		return err
 	}
-	//2. Проверка суммы у пользака
-	// bool, error := b.CheckPaiment
-	//3. списание средств err := b.DebitingMoney
-	//4.  уведомление err := b.notify
+
 	return nil
 }

@@ -3,22 +3,27 @@ package main
 import (
 	"log"
 
+	"github.com/LAshinCHE/ticket_booking_service/saga-orchestrator/activities"
+	"github.com/LAshinCHE/ticket_booking_service/saga-orchestrator/clients"
 	workflows "github.com/LAshinCHE/ticket_booking_service/saga-orchestrator/workflow"
-	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/worker"
 )
 
 func main() {
-	c, err := client.Dial(client.Options{HostPort: "temporal:7233"})
+	temporalClient, err := clients.NewTemporalClient()
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatalf("Could not initialize temporal client to interapt with saga service %s", err)
+	}
+	defer temporalClient.Client.Close()
+
+	w := worker.New(temporalClient.Client, "BOOKING_SAGA_QUEUE", worker.Options{})
+
+	w.RegisterWorkflow(workflows.BookingSagaWorkflow)
+	w.RegisterActivity(activities.WorkflowActivitie{})
+
+	err = w.Run(worker.InterruptCh())
+	if err != nil {
+		log.Fatalln("unable to start Worker", err)
 	}
 
-	worker := worker.New(c, "booking-saga-task-queue", worker.Options{
-		MetricsScope: tally.NewScope("saga", nil),
-	})
-	worker.RegisterWorkflow(workflows.BookingSagaWorkflow())
-	worker.RegisterActivity(activities.CheckAvailability /* и др. */)
-
-	log.Fatal(worker.Run(worker.InterruptCh()))
 }

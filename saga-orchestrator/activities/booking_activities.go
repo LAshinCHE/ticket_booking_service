@@ -9,7 +9,10 @@ import (
 	"github.com/LAshinCHE/ticket_booking_service/saga-orchestrator/models"
 )
 
-func CheckBookingActivity(ctx context.Context, params models.BookingParams) error {
+type WorkflowActivitie struct {
+}
+
+func (w *WorkflowActivitie) CheckBookingActivity(ctx context.Context, params models.BookingParams) error {
 	bookingClient := clients.NewBookingClient(os.Getenv("BOOKING_ADDRES"))
 	err := bookingClient.CheckBooking(ctx, params.ID)
 	if err != nil {

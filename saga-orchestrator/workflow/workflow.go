@@ -14,6 +14,10 @@ type BookingSagaParams struct {
 }
 
 func BookingSagaWorkflow(ctx workflow.Context, params BookingSagaParams) error {
+
+	logger := workflow.GetLogger(ctx)
+	logger.Info("Starting BookingSagaWorkflow", "UserID", params.UserID, "TicketID", params.TicketID)
+
 	opts := workflow.ActivityOptions{
 		StartToCloseTimeout: time.Second * 10,
 		RetryPolicy: &temporal.RetryPolicy{

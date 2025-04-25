@@ -14,7 +14,7 @@ type SagaClient struct {
 
 func NewTemporalClient() (*SagaClient, error) {
 	TemporalClient, err := client.Dial(client.Options{
-		HostPort: "temporal:7233", // или "localhost:7233" если запускаешь локально без Docker
+		HostPort: "temporal:7233",
 	})
 	if err != nil {
 		return nil, err

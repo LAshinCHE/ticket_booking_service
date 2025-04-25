@@ -15,7 +15,7 @@ type RepositoryBooking interface {
 }
 
 type SagaClient interface {
-	StartBookingSaga(ctx context.Context, bookingID int64, userID uuid.UUID, ticketID uuid.UUID) error
+	StartBookingSaga(ctx context.Context, prams models.CreateBookingData) error
 }
 
 type Deps struct {
@@ -50,38 +50,39 @@ func (b *Booking) GetBookingByID(ctx context.Context, id uuid.UUID) (*models.Boo
 }
 
 // Создает бронь (создает отправляет статус запроса в saga-service) в случае ошибки saga-service принимает решение о дальнейших действиях
-func (b *Booking) CreateBooking(ctx context.Context, userID uuid.UUID, ticketID uuid.UUID) (int64, error) {
-	booking := &models.Booking{
-		UserID:  userID,
-		Tikcets: ticketID,
-		Status:  models.BookingStatusDraft,
-	}
+func (b *Booking) CreateBooking(ctx context.Context, req models.CreateBookingData) (int64, error) {
+	// booking := &models.Booking{
+	// 	UserID:  userID,
+	// 	Tikcets: ticketID,
+	// 	Status:  models.BookingStatusDraft,
+	// }
 
-	bookingID, err := b.RepositoryBooking.CreateBooking(ctx, booking)
-	if err != nil {
-		return 0, err
-	}
+	// bookingID, err := b.RepositoryBooking.CreateBooking(ctx, booking)
+	// if err != nil {
+	// 	return 0, err
+	// }
 
-	err = b.SagaClient.StartBookingSaga(ctx, bookingID, userID, ticketID)
-	if err != nil {
-		return bookingID, fmt.Errorf("failed to start saga: %w", err)
-	}
+	// err = b.SagaClient.StartBookingSaga(ctx, bookingID, userID, ticketID)
+	// if err != nil {
+	// 	return bookingID, fmt.Errorf("failed to start saga: %w", err)
+	// }
 
-	return bookingID, nil
+	// return bookingID, nil
+	return 0, nil
 }
 
-// func (b *Booking) MakeBooking(ctx context.Context, ticketID models.TicketID, user_id models.UserID, price float64) error {
-// 	//основная ручка которая выполняет запрос сразу в несколько сервисов
-// 	// проверка забронирован ли у нас билет
-// 	// err := b.CheckTicket() // логика что билет   нас может быть забронирван кем-то другим
-// 	//1. Проверяет доступность билета и резервирует его
-// 	err := b.ReserveTicket(ctx, ticketID) // билет не доступен по каким-то другим причинам условно удален админом
-// 	if err != nil {
-// 		return err
-// 	}
-// 	//2. Проверка суммы у пользака
-// 	// bool, error := b.CheckPaiment
-// 	//3. списание средств err := b.DebitingMoney
-// 	//4.  уведомление err := b.notify
-// 	return nil
-// }
+func (b *Booking) CreateBooking(ctx context.Context, ticketID models.TicketID, user_id models.UserID, price float64) error {
+	//основная ручка которая выполняет запрос сразу в несколько сервисов
+	// проверка забронирован ли у нас билет
+	// err := b.CheckTicket() // логика что билет   нас может быть забронирван кем-то другим
+	//1. Проверяет доступность билета и резервирует его
+	err := b.ReserveTicket(ctx, ticketID) // билет не доступен по каким-то другим причинам условно удален админом
+	if err != nil {
+		return err
+	}
+	//2. Проверка суммы у пользака
+	// bool, error := b.CheckPaiment
+	//3. списание средств err := b.DebitingMoney
+	//4.  уведомление err := b.notify
+	return nil
+}

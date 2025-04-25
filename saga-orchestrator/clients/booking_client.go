@@ -21,15 +21,15 @@ func NewBookingClient(baseURL string) *BookingClient {
 	}
 }
 
-func (c *BookingClient) CheckBooking(ctx context.Context, bookingID int64) error {
-	url := fmt.Sprintf("%s/booking/%d/check", c.BaseURL, bookingID)
+func (bc *BookingClient) CheckBooking(ctx context.Context, bookingID int64) error {
+	url := fmt.Sprintf("%s/booking/%d/check", bc.BaseURL, bookingID)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
 	}
 
-	resp, err := c.HTTPClient.Do(req)
+	resp, err := bc.HTTPClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("failed to call booking service: %w", err)
 	}

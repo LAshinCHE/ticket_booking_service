@@ -24,7 +24,7 @@ func NewNotificationClient(addr string, timeout time.Duration) *NotificationClie
 }
 
 func (nc *NotificationClient) Notify(ctx context.Context, params models.BookingParams) error {
-	url := fmt.Sprintf("http//localhost:%d/notify/%d", nc.Addres, params.UserID)
+	url := fmt.Sprintf("%s/notify/%d", nc.Addres, params.UserID)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {

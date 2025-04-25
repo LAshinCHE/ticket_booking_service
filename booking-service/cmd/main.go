@@ -9,6 +9,7 @@ import (
 
 	"github.com/LAshinCHE/ticket_booking_service/booking-service/cmd/internal"
 	internalhttp "github.com/LAshinCHE/ticket_booking_service/booking-service/internal/api/http"
+	"github.com/LAshinCHE/ticket_booking_service/booking-service/internal/client"
 	"github.com/LAshinCHE/ticket_booking_service/booking-service/internal/domain/service"
 	"github.com/LAshinCHE/ticket_booking_service/booking-service/internal/repository"
 )
@@ -39,8 +40,15 @@ func main() {
 
 	repoBooking := repository.NewRepository(db)
 
+	temporalClient, err := client.NewTemporalClient()
+	if err != nil {
+		log.Fatalf("Could not initialize temporal client to interapt with saga service %s", err)
+	}
+	defer temporalClient.Client.Close()
+
 	bookingService := service.NewBookingService(service.Deps{
 		RepositoryBooking: repoBooking,
+		SagaClient:        temporalClient,
 	})
 
 	internalhttp.MustRun(ctx, shutdownDuration, applicationPort, bookingService)

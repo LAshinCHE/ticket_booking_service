@@ -1,6 +1,7 @@
 package types
 
 import (
+	"encoding/json"
 	"net/http"
 
 	"github.com/LAshinCHE/ticket_booking_service/booking-service/internal/models"
@@ -27,6 +28,11 @@ func GetBookingByID(r *http.Request) (uuid.UUID, error) {
 	return id, nil
 }
 
-func CreateBooking(r *http.Request) (*models.Booking, error) {
-	return nil, nil
+func CreateBooking(r *http.Request) (models.CreateBookingData, error) {
+	var req models.CreateBookingData
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return models.CreateBookingData{}, err
+	}
+
+	return req, nil
 }

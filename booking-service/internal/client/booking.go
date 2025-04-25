@@ -1,40 +1,34 @@
 package client
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
-	"fmt"
-	"net/http"
 	"time"
+
+	"github.com/LAshinCHE/ticket_booking_service/booking-service/internal/models"
+	"go.temporal.io/sdk/client"
 )
 
 type SagaClient struct {
-	Client http.Client
+	Client client.Client
 }
 
-func NewSagaClient() *SagaClient {
-	return &SagaClient{
-		Client: http.Client{Timeout: time.Duration(1) * time.Second},
-	}
-}
-
-func (sc *SagaClient) StartBookingSaga(ctx context.Context, bookingID int64, userID int64, ticketID int64) error {
-	body := map[string]interface{}{
-		"booking_id": bookingID,
-		"user_id":    userID,
-	}
-
-	jsonData, _ := json.Marshal(body)
-	resp, err := http.Post("http://saga-service:8080/start", "application/json", bytes.NewBuffer(jsonData))
+func NewTemporalClient() (*SagaClient, error) {
+	TemporalClient, err := client.Dial(client.Options{
+		HostPort: "temporal:7233", // или "localhost:7233" если запускаешь локально без Docker
+	})
 	if err != nil {
-		return err
+		return nil, err
+	}
+	return &SagaClient{Client: TemporalClient}, nil
+}
+
+func (s *SagaClient) StartBookingSaga(ctx context.Context, req models.CreateBookingData) error {
+	options := client.StartWorkflowOptions{
+		ID:        "booking_workflow_" + time.Now().Format("20060102150405"),
+		TaskQueue: "BOOKING_SAGA_TASK_QUEUE",
 	}
 
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("Saga service returned status %d", resp.StatusCode)
-	}
+	_, err := s.Client.ExecuteWorkflow(ctx, options, "BookingWorkflow", req)
+	return err
 
-	return nil
 }

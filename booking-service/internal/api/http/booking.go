@@ -33,6 +33,8 @@ func MustRun(ctx context.Context, shutdownDur time.Duration, addr string, app se
 	r.HandleFunc("/", handler.HealthCheck).Methods("GET")
 	r.PathPrefix("/swagger/").Handler(httpSwagger.WrapHandler)
 	r.HandleFunc("/booking/{booking_id}", handler.GetBookingByIDHandler).Methods("GET")
+	r.HandleFunc("/booking/", handler.CreateBookingHandler).Methods("POST")
+	r.HandleFunc("/booking/delete", handler.DeleteBooking).Methods("DELETE")
 	// TODO: /booking/{booking_id}/check
 
 	server := &http.Server{
@@ -88,17 +90,20 @@ func (h *Handler) GetBookingByIDHandler(writer http.ResponseWriter, request *htt
 	types.ProcessError(writer, err, &types.GetBookingByIDHandlerResponse{Booking: booking})
 }
 
-// func (h *Handler) CreateBookingHandler(writer http.ResponseWriter, request *http.Request) {
-// 	uuid, err := types.CreateBooking(request)
-// 	if err != nil {
-// 		http.Error(writer, err.Error(), http.StatusBadRequest)
-// 	}
+func (h *Handler) CreateBookingHandler(writer http.ResponseWriter, request *http.Request) {
+	bookingParams, err := types.CreateBooking(request)
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusBadRequest)
+	}
+	bookingParams.ID = uuid.New()
 
-// 	booking, err := h.service.GetBookingByID(request.Context(), uuid)
+	types.ProcessError(writer, err, &types.GetBookingByIDHandlerResponse{Booking: booking})
 
-// 	types.ProcessError(writer, err, &types.GetBookingByIDHandlerResponse{Booking: booking})
+}
 
-// }
+func (h *Handler) DeleteBooking(writer http.ResponseWriter, request *http.Request) {
+
+}
 
 type Handler struct {
 	service service

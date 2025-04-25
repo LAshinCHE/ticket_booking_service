@@ -24,6 +24,13 @@ type Booking struct {
 	Status  BookingStatus
 }
 
+type CreateBookingData struct {
+	ID       uuid.UUID
+	TicketID uuid.UUID
+	UserID   int64
+	Price    float64
+}
+
 func MapBookingStatus(status string) BookingStatus {
 	switch status {
 	case "draft":

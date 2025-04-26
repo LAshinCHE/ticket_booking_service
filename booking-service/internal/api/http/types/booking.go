@@ -15,10 +15,13 @@ type GetBookingByIDHandlerResponse struct {
 	Booking *models.Booking
 }
 
+type CreateBookingResponse struct {
+	BookingID uuid.UUID
+}
+
 type CreateBookingInternalRequest struct {
-	BookingID string `json:"booking_id"`
-	UserID    int64  `json:"user_id"`
-	TicketID  string `json:"ticket_id"`
+	UserID   int64  `json:"user_id"`
+	TicketID string `json:"ticket_id"`
 }
 
 type DeleteBookingInternalRequest struct {

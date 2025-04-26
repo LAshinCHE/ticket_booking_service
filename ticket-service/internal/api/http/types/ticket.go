@@ -24,6 +24,27 @@ func GetTicketIDRequest(r *http.Request) (uuid.UUID, error) {
 	return id, nil
 }
 
+func UpdateTicketAvaibleRequest(r *http.Request) (models.TicketUpdateAvaibleData, uuid.UUID, error) {
+	vars := mux.Vars(r)
+	uuidStr, ok := vars["ticket_id"]
+	if !ok || len(uuidStr) == 0 {
+		return models.TicketUpdateAvaibleData{}, uuid.Nil, BadUUID
+	}
+	id, err := uuid.Parse(uuidStr)
+
+	if err != nil {
+		return models.TicketUpdateAvaibleData{}, uuid.Nil, err
+	}
+
+	var req models.TicketUpdateAvaibleData
+	decoder := json.NewDecoder(r.Body)
+	err = decoder.Decode(&req)
+	if err != nil {
+		return models.TicketUpdateAvaibleData{}, uuid.Nil, err
+	}
+	return req, id, nil
+}
+
 func CreateTicketRequest(r *http.Request) (models.TicketModelParamRequest, error) {
 	var req models.TicketModelParamRequest
 	decoder := json.NewDecoder(r.Body)

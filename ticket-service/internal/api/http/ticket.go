@@ -24,6 +24,7 @@ type service interface {
 	GetTicket(ctx context.Context, ticketID uuid.UUID) (*models.Ticket, error)
 	CheckTicket(ctx context.Context, ticketID uuid.UUID) (bool, error)
 	CreateTicket(ctx context.Context, ticketParam models.TicketModelParamRequest) (uuid.UUID, error)
+	UpdateTicketAvaible(ctx context.Context, ticketID uuid.UUID) error
 }
 
 func MustRun(ctx context.Context, shutdownDur time.Duration, addr string, app service) {
@@ -39,8 +40,8 @@ func MustRun(ctx context.Context, shutdownDur time.Duration, addr string, app se
 	r.PathPrefix("/swagger/").Handler(httpSwagger.WrapHandler)
 	r.HandleFunc("/ticket/", handler.CreateTicketHandler).Methods("POST")
 	r.HandleFunc("/ticket/{ticket_id}", handler.GetTicketByIDHandler).Methods("GET")
-	r.HandleFunc("/ticket/check/{ticket_id}", handler.CheckTicketHandler).Methods("GET")
-	//r.HandleFunc("/ticket/{id}/reserve")
+	r.HandleFunc("/ticket/{ticket_id}/check", handler.CheckTicketHandler).Methods("GET")
+	r.HandleFunc("/tickets/{ticket_id}", handler.UpdateTicketAvaibleHandler).Methods("PUT")
 
 	server := http.Server{
 		Addr:    addr,
@@ -149,6 +150,17 @@ func (h *Handler) CreateTicketHandler(w http.ResponseWriter, r *http.Request) {
 	ticketID, err := h.service.CreateTicket(ctx, params)
 	span.SetAttributes(attribute.String("ticket.id", ticketID.String()))
 	types.ProcessError(w, err, &types.CreateTicketResponse{Id: ticketID})
+}
+
+func (h *Handler) UpdateTicketAvaibleHandler(w http.ResponseWriter, r *http.Request) {
+	params, id, err := types.UpdateTicketAvaibleRequest(r)
+	if err != nil || params.Available == false {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	err = h.service.UpdateTicketAvaible(r.Context(), id)
+	types.ProcessError(w, err, nil)
 }
 
 type Handler struct {

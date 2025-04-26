@@ -114,18 +114,16 @@ func (h *Handler) CreateBookingInternalHandler(w http.ResponseWriter, r *http.Re
 		http.Error(w, "invalid request", http.StatusBadRequest)
 		return
 	}
-
+	bookingID := uuid.New()
 	booking := models.Booking{
-		ID:       uuid.MustParse(req.BookingID),
+		ID:       bookingID,
 		UserID:   req.UserID,
 		TicketID: uuid.MustParse(req.TicketID),
 	}
 
-	if err := h.service.CreateBookingInternal(r.Context(), booking); err != nil {
-		http.Error(w, "failed to create booking", http.StatusInternalServerError)
-		return
-	}
+	err := h.service.CreateBookingInternal(r.Context(), booking)
 
+	types.ProcessError(w, err, &types.CreateBookingResponse{BookingID: bookingID})
 	w.WriteHeader(http.StatusOK)
 }
 

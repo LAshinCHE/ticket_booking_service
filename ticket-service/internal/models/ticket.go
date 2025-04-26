@@ -12,11 +12,15 @@ const (
 )
 
 type Ticket struct {
-	ID        uuid.UUID
-	Price     float64
-	Available bool
+	ID        uuid.UUID `json:"ticket_id"`
+	Price     float64   `json:"price"`
+	Available bool      `json:"available"`
 }
 
 type TicketModelParamRequest struct {
 	Price float64 `json:"price"`
+}
+
+type TicketUpdateAvaibleData struct {
+	Available bool `json:"available"`
 }

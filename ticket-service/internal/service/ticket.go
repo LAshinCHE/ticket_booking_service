@@ -15,6 +15,7 @@ type RepositoryTicket interface {
 	GetAvailability(ctx context.Context, ticketID uuid.UUID) (bool, error)
 	GetTicket(ctx context.Context, ticketID uuid.UUID) (*models.Ticket, error)
 	CreateTicket(ctx context.Context, ticket models.Ticket) error
+	UpdateTicketAvaible(ctx context.Context, ticketID uuid.UUID) error
 }
 
 type Deps struct {
@@ -76,4 +77,8 @@ func (t *Ticket) CreateTicket(ctx context.Context, ticketParam models.TicketMode
 
 	return id, t.RepositoryTicket.CreateTicket(ctx, ticket)
 
+}
+
+func (t *Ticket) UpdateTicketAvaible(ctx context.Context, ticketID uuid.UUID) error {
+	return t.RepositoryTicket.UpdateTicketAvaible(ctx, ticketID)
 }

@@ -44,16 +44,14 @@ func (a *BookingActivities) CreateBooking(
 	ctx context.Context,
 	userID int64,
 	ticketID string,
-	price float64,
 ) (string, error) {
 
 	payload := struct {
-		UserID   int64   `json:"user_id"`
-		TicketID string  `json:"ticket_id"`
-		Price    float64 `json:"price"`
-	}{userID, ticketID, price}
+		UserID   int64  `json:"user_id"`
+		TicketID string `json:"ticket_id"`
+	}{userID, ticketID}
 
-	resBody, err := a.doPOST(ctx, a.SVC.BookingURL+"/bookings", payload)
+	resBody, err := a.doPOST(ctx, a.SVC.BookingURL+"/internal/booking/create", payload)
 	if err != nil {
 		return "", err
 	}
@@ -74,7 +72,7 @@ func (a *BookingActivities) CheckTicketAvailability(
 	ticketID string,
 ) (bool, error) {
 
-	resBody, err := a.doGET(ctx, a.SVC.TicketURL+"/tickets/"+ticketID+"/availability")
+	resBody, err := a.doGET(ctx, a.SVC.TicketURL+"/ticket/"+ticketID+"/check")
 	if err != nil {
 		return false, err
 	}
@@ -203,6 +201,7 @@ func (a *BookingActivities) doWithBody(ctx context.Context, method, url string, 
 	raw, _ := json.Marshal(payload)
 	req, _ := http.NewRequestWithContext(ctx, method, url, bytes.NewReader(raw))
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "super-secure-saga-token")
 	return a.do(req)
 }
 

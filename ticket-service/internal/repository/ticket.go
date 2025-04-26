@@ -125,6 +125,20 @@ func (r *Repository) CreateTicket(ctx context.Context, ticket models.Ticket) err
 	return nil
 }
 
+func (r *Repository) UpdateTicketAvaible(ctx context.Context, ticketID uuid.UUID) error {
+	query := sq.Update(ticketTable).Set("available", false).Where(sq.Eq{"id": ticketID}).PlaceholderFormat(sq.Dollar)
+
+	rawQuery, args, err := query.ToSql()
+	if err != nil {
+		return fmt.Errorf("failed to build query: %w", err)
+	}
+	_, err = r.db.Exec(ctx, rawQuery, args...)
+	if err != nil {
+		return fmt.Errorf("failed to execute update: %w", err)
+	}
+	return nil
+}
+
 func ToDomainTicket(ticket schemas.Ticket) *models.Ticket {
 
 	return &models.Ticket{

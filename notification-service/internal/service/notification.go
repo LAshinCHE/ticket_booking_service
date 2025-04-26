@@ -15,7 +15,7 @@ func NewNotificationService() *NotificationService {
 }
 
 func (s *NotificationService) SendNotification(ctx context.Context, req models.NotificationRequest) error {
-	log.Printf("Notify user %s: %s\n", req.UserID, req.Message)
+	log.Printf("Notify user %d: %s\n", req.UserID, req.Message)
 	// Здесь может быть логика отправки email, push и т.п.
 	return nil
 }

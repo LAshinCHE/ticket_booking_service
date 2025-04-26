@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/LAshinCHE/ticket_booking_service/notification-service/internal/models"
@@ -43,7 +44,25 @@ func MustRun(ctx context.Context, addr string, app NotificationService, shutdowm
 }
 
 func (h *Handler) Notify(w http.ResponseWriter, r *http.Request) {
+	message := r.URL.Query().Get("message")
+	if message == "" {
+		http.Error(w, "missing message", http.StatusBadRequest)
+		return
+	}
 
+	userIDStr := r.URL.Query().Get("userID")
+	userID, err := strconv.ParseInt(userIDStr, 10, 64)
+	if err != nil {
+		http.Error(w, "missing message", http.StatusBadRequest)
+		return
+	}
+
+	h.service.SendNotification(
+		r.Context(),
+		models.NotificationRequest{
+			UserID:  userID,
+			Message: message,
+		})
 }
 
 type Handler struct {

@@ -2,13 +2,15 @@ package service
 
 import (
 	"context"
+	"errors"
+	"fmt"
 
-	"github.com/google/uuid"
+	"github.com/LAshinCHE/ticket_booking_service/payment-service/internal/repository"
 )
 
 type PaymentRepository interface {
-	GetBalance(ctx context.Context, paymentID uuid.UUID) (float64, error)
-	UpdateBalance(ctx context.Context, paymentID uuid.UUID, funds float64) error
+	DebitUserBalance(ctx context.Context, userID int64, amount float64) error
+	CreditUserBalance(ctx context.Context, userID int64, amount float64) error
 }
 
 type Deps struct {
@@ -25,22 +27,26 @@ func NewPaymentService(d Deps) *Service {
 	}
 }
 
-func (s *Service) DebitFundsFromBalance(ctx context.Context, paymentID uuid.UUID, funds float64) error {
-	if funds > 0 {
-		funds *= -1
+func (s *Service) DebitBalance(ctx context.Context, userID int64, amount float64) (bool, error) {
+	err := s.PaymentRepository.DebitUserBalance(ctx, userID, amount)
+	if err != nil {
+		if errors.Is(err, repository.ErrInsufficientFunds) {
+			return false, nil
+		}
+		return false, err
 	}
-
-	return s.PaymentRepository.UpdateBalance(ctx, paymentID, funds)
+	return true, nil
 }
 
-func (s *Service) RefundFundsToBalance(ctx context.Context, paymentID uuid.UUID, funds float64) error {
-	if funds < 0 {
-		funds *= -1
+func (s *Service) RefundBalance(ctx context.Context, userID int64, amount float64) error {
+	if amount <= 0 {
+		return fmt.Errorf("refund amount must be positive")
 	}
-
-	return s.PaymentRepository.UpdateBalance(ctx, paymentID, funds)
+	err := s.PaymentRepository.CreditUserBalance(ctx, userID, amount)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
-func (s *Service) GetBalance(ctx context.Context, paymentID uuid.UUID) (float64, error) {
-	return s.PaymentRepository.GetBalance(ctx, paymentID)
-}
+var ErrInsufficientFunds = errors.New("insufficient funds")

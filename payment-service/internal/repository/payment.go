@@ -2,8 +2,9 @@ package repository
 
 import (
 	"context"
+	"errors"
+	"fmt"
 
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -17,10 +18,69 @@ func NewReopository(db *pgxpool.Pool) *Repository {
 	}
 }
 
-func (r *Repository) GetBalance(ctx context.Context, paymentID uuid.UUID) (float64, error) {
-	return 0, nil
+var ErrInsufficientFunds = errors.New("insufficient funds")
+
+func (r *Repository) DebitUserBalance(ctx context.Context, userID int64, amount float64) error {
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("start tx: %w", err)
+	}
+	defer func() {
+		if err != nil {
+			tx.Rollback(ctx)
+		} else {
+			tx.Commit(ctx)
+		}
+	}()
+
+	var currentBalance float64
+	err = tx.QueryRow(ctx, `
+		SELECT balance
+		FROM users
+		WHERE id = $1
+		FOR UPDATE
+	`, userID).Scan(&currentBalance)
+	if err != nil {
+		return fmt.Errorf("select balance: %w", err)
+	}
+
+	if currentBalance < amount {
+		return ErrInsufficientFunds
+	}
+
+	_, err = tx.Exec(ctx, `
+		UPDATE users
+		SET balance = balance - $1
+		WHERE id = $2
+	`, amount, userID)
+	if err != nil {
+		return fmt.Errorf("update balance: %w", err)
+	}
+
+	return nil
 }
 
-func (r *Repository) UpdateBalance(ctx context.Context, paymentID uuid.UUID, payment float64) error {
+func (r *Repository) CreditUserBalance(ctx context.Context, userID int64, amount float64) error {
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("start tx: %w", err)
+	}
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback(ctx)
+		} else {
+			_ = tx.Commit(ctx)
+		}
+	}()
+
+	_, err = tx.Exec(ctx, `
+		UPDATE users
+		SET balance = balance + $1
+		WHERE id = $2
+	`, amount, userID)
+	if err != nil {
+		return fmt.Errorf("update balance: %w", err)
+	}
+
 	return nil
 }

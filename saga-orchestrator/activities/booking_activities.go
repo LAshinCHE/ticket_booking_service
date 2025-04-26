@@ -38,8 +38,7 @@ type BookingActivities struct {
 // NewBookingActivities создаём в main() и регистрируем  ➜  worker.RegisterActivity(...)
 func NewBookingActivities(svc ServiceClients) *BookingActivities { return &BookingActivities{SVC: svc} }
 
-// --------- 1. Создать бронирование -------------------------------------------
-
+// 1. Создать бронирование
 func (a *BookingActivities) CreateBooking(
 	ctx context.Context,
 	userID int64,
@@ -65,8 +64,7 @@ func (a *BookingActivities) CreateBooking(
 	return resp.BookingID, nil
 }
 
-// --------- 2. Проверка билета в наличии --------------------------------------
-
+// 2. Проверка билета в наличии
 func (a *BookingActivities) CheckTicketAvailability(
 	ctx context.Context,
 	ticketID string,
@@ -86,8 +84,7 @@ func (a *BookingActivities) CheckTicketAvailability(
 	return resp.Available, nil
 }
 
-// --------- 3. Перевод билета в статус «забронирован» --------------------------
-
+// 3. Перевод билета в статус «забронирован»
 func (a *BookingActivities) ReserveTicket(
 	ctx context.Context,
 	ticketID string,
@@ -101,50 +98,41 @@ func (a *BookingActivities) ReserveTicket(
 	return err
 }
 
-// --------- 4. Проверить баланс клиента ---------------------------------------
-
-func (a *BookingActivities) CheckUserBalance(
-	ctx context.Context,
-	userID int64,
-	amount float64,
-) (bool, error) {
-
-	resBody, err := a.doGET(ctx,
-		fmt.Sprintf("%s/users/%d/balance?amount=%.2f", a.SVC.PaymentURL, userID, amount))
-	if err != nil {
-		return false, err
-	}
-
-	var resp struct {
-		Enough bool `json:"enough"`
-	}
-	if err := json.Unmarshal(resBody, &resp); err != nil {
-		return false, fmt.Errorf("decode balance: %w", err)
-	}
-	return resp.Enough, nil
-}
-
-// --------- 5. Списать средства -----------------------------------------------
-
+// 4. Списать средства
+// Сharge будет проверять что у нас хватает денег на балансе и в случае нехватки возвращать ошибку
 func (a *BookingActivities) WithdrawMoney(
 	ctx context.Context,
 	userID int64,
 	amount float64,
-	bookingID string,
 ) error {
 
 	payload := struct {
-		UserID    int64   `json:"user_id"`
-		Amount    float64 `json:"amount"`
-		BookingID string  `json:"booking_id"`
-	}{userID, amount, bookingID}
+		UserID int64   `json:"user_id"`
+		Amount float64 `json:"amount"`
+	}{userID, amount}
 
-	_, err := a.doPOST(ctx, a.SVC.PaymentURL+"/payments/withdraw", payload)
+	_, err := a.doPOST(ctx, a.SVC.PaymentURL+"/payments/charge", payload)
 	return err
 }
 
-// --------- 6. Уведомить пользователя -----------------------------------------
+// 4*. Отмена операции списания средства
+// Сharge будет проверять что у нас хватает денег на балансе и в случае нехватки возвращать ошибку
+func (a *BookingActivities) CancelWithdrawMoney(
+	ctx context.Context,
+	userID int64,
+	amount float64,
+) error {
 
+	payload := struct {
+		UserID int64   `json:"user_id"`
+		Amount float64 `json:"amount"`
+	}{userID, amount}
+
+	_, err := a.doPOST(ctx, a.SVC.PaymentURL+"/payments/refund", payload)
+	return err
+}
+
+// 5. Уведомить пользователя
 func (a *BookingActivities) NotifyUser(
 	ctx context.Context,
 	userID int64,

@@ -1,7 +1,6 @@
 package workflow
 
 import (
-	"fmt"
 	"time"
 
 	"go.temporal.io/sdk/workflow"
@@ -53,24 +52,14 @@ func BookingSagaWorkflow(ctx workflow.Context, p BookingParams) error {
 	}
 
 	//----------------------------------------------------------------------
-	// 4. Проверяем баланс
-	if err := workflow.ExecuteActivity(ctx,
-		acts.CheckUserBalance, p.UserID, p.Price).Get(ctx, &ok); err != nil {
-		return err
-	}
-	if !ok {
-		return fmt.Errorf("insufficient funds")
-	}
-
-	//----------------------------------------------------------------------
-	// 5. Списываем деньги
+	// 4. Списываем деньги
 	if err := workflow.ExecuteActivity(ctx,
 		acts.WithdrawMoney, p.UserID, p.Price, bookingID).Get(ctx, nil); err != nil {
 		return err
 	}
-
+	defer workflow.ExecuteActivity(ctx, acts.CancelWithdrawMoney, p.UserID, p.Price).Get(ctx, nil)
 	//----------------------------------------------------------------------
-	// 6. Уведомляем пользователя (не критично, поэтому без проверки Get)
+	// 5. Уведомляем пользователя (не критично, поэтому без проверки Get)
 	_ = workflow.ExecuteActivity(ctx,
 		acts.NotifyUser, p.UserID, "Бронирование успешно").Get(ctx, nil)
 

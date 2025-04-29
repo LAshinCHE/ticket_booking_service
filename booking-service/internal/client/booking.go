@@ -26,6 +26,14 @@ func NewTemporalClient() (*SagaClient, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	_, err = TemporalClient.CheckHealth(ctx, &client.CheckHealthRequest{})
+	if err != nil {
+		return nil, err
+	}
 	return &SagaClient{Client: TemporalClient}, nil
 }
 

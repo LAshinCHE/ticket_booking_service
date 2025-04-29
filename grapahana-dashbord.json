@@ -1,0 +1,77 @@
+{
+    "title": "Microservices Observability",
+    "schemaVersion": 35,
+    "version": 1,
+    "refresh": "5s",
+    "templating": {
+      "list": [
+        {
+          "name": "service",
+          "type": "query",
+          "datasource": "Prometheus",
+          "query": "label_values(http_server_requests_total, job)",
+          "multi": true,
+          "includeAll": true,
+          "refresh": 2
+        }
+      ]
+    },
+    "panels": [
+      {
+        "id": 1,
+        "type": "timeseries",
+        "title": "Requests per second",
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "sum(rate(http_server_requests_total{job=~\"$service\"}[1m])) by (job)",
+            "legendFormat": "{{job}}",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "type": "timeseries",
+        "title": "5xx Error rate (%)",
+        "datasource": "Prometheus",
+        "fieldConfig": {
+          "defaults": {"unit": "percent"}
+        },
+        "targets": [
+          {
+            "expr": "(sum(rate(http_server_requests_total{job=~\"$service\",code=~\"5..\"}[5m])) by (job)) / (sum(rate(http_server_requests_total{job=~\"$service\"}[5m])) by (job)) * 100",
+            "legendFormat": "{{job}}",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "type": "timeseries",
+        "title": "Latency p95 (s)",
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(http_server_request_duration_seconds_bucket{job=~\"$service\"}[5m])) by (le,job))",
+            "legendFormat": "{{job}}",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "type": "timeseries",
+        "title": "DB Connections",
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "pg_stat_activity_count{job=~\".*-db\"}",
+            "legendFormat": "{{datname}}",
+            "refId": "A"
+          }
+        ]
+      }
+    ]
+  }
+  

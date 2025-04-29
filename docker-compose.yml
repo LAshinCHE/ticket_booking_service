@@ -5,11 +5,15 @@ services:
     build: ./booking-service
     ports:
       - "8081:8081"
-    networks:
-      - monitoring
+    depends_on:
+      - temporal
     environment:
       - DB_HOST=booking-db
       - DB_PORT=5432
+      - TEMPORAL_ADDRESS=temporal:7233
+    networks:
+      - monitoring
+
 
   ticket-service:
     build: ./ticket-service
@@ -128,7 +132,6 @@ services:
     container_name: jaeger
     ports:
       - "16686:16686"
-      - "4318:4318"
     networks:
       - monitoring
 
@@ -137,14 +140,12 @@ services:
     container_name: tempo
     ports:
       - "3200:3200"
-      - "4317:4317"
-      - "5318:4318"
-    command: [ "-config.file=/etc/tempo.yaml" ]
+      - "4317:4317"   # OTLP gRPC 
     volumes:
       - ./tempo/tempo.yaml:/etc/tempo.yaml
+    command: ["--config.file=/etc/tempo.yaml"]
     networks:
       - monitoring
-
   postgres-exporter-booking:
     image: prometheuscommunity/postgres-exporter
     environment:
@@ -166,7 +167,7 @@ services:
   temporal:
       image: temporalio/auto-setup:1.22
       ports:
-        - "7233:7233" # Порт Temporal Frontend
+        - "7233:7233"
       environment:
         - DB=postgresql
         - DB_PORT=5432
@@ -201,10 +202,9 @@ services:
     depends_on:
       - temporal
 
-
 networks:
   monitoring:
     driver: bridge
 
 volumes:
-  temporal_pgdata:
+    temporal_pgdata:

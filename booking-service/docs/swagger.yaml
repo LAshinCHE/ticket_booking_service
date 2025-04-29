@@ -6,10 +6,10 @@ definitions:
         type: string
       status:
         $ref: '#/definitions/models.BookingStatus'
-      tikcets:
+      ticketID:
         type: string
       userID:
-        type: string
+        type: integer
     type: object
   models.BookingStatus:
     enum:
@@ -33,7 +33,7 @@ definitions:
       booking:
         $ref: '#/definitions/models.Booking'
     type: object
-host: localhost:8080
+host: localhost:8081
 info:
   contact: {}
   description: API для сервиса бронирования

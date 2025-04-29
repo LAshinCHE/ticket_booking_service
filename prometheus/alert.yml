@@ -1,0 +1,35 @@
+groups:
+  - name: microservices
+    rules:
+      - alert: HighErrorRate
+        expr: (sum(rate(http_server_requests_total{code=~"5.."}[5m])) by (job)) / (sum(rate(http_server_requests_total[5m])) by (job)) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High 5xx error rate in {{ $labels.job }}"
+          description: "{{ $labels.job }} has >5% 5xx errors in last 5 minutes."
+      - alert: ServiceDown
+        expr: up{job=~"booking-service|ticket-service|payment-service|notification-service"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.job }} is down"
+          description: "{{ $labels.job }} has been unreachable for 2 minutes."
+      - alert: DatabaseDown
+        expr: pg_up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.job }} database down"
+          description: "Postgres exporter for {{ $labels.job }} is reporting database not up."
+      - alert: HighLatency
+        expr: histogram_quantile(0.95,sum(rate(http_server_request_duration_seconds_bucket{job=~\"booking-service|ticket-service|payment-service\"}[5m])) by (le,job)) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High latency p95 > 500ms for {{ $labels.job }}"
+          description: "{{ $labels.job }} p95 latency over 500ms for last 5 minutes."

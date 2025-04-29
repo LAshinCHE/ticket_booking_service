@@ -1,24 +1,27 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"github.com/LAshinCHE/ticket_booking_service/saga-service/activities"
-	"github.com/LAshinCHE/ticket_booking_service/saga-service/clients"
 	sagawf "github.com/LAshinCHE/ticket_booking_service/saga-service/workflow"
+	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/worker"
 )
 
 func main() {
-	tc, err := clients.NewTemporalClient()
+	fmt.Println("Try listen service 0.0.0.0:7233")
+	tc, err := client.Dial(client.Options{
+		HostPort: "temporal:7233",
+	})
 	if err != nil {
 		log.Fatalf("init Temporal client: %v", err)
 	}
-	defer tc.Client.Close()
-
+	defer tc.Close()
 	svcs := activities.NewServiceClients(
 		"http://localhost:8080",
 		"http://localhost:8082",
@@ -27,7 +30,7 @@ func main() {
 	)
 	acts := activities.NewBookingActivities(svcs)
 
-	w := worker.New(tc.Client, "BOOKING_SAGA_QUEUE", worker.Options{})
+	w := worker.New(tc, "BOOKING_SAGA_QUEUE", worker.Options{})
 
 	w.RegisterWorkflow(sagawf.BookingSagaWorkflow)
 	w.RegisterActivity(acts)

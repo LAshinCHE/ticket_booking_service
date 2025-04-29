@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"os"
 	"os/signal"
 	"syscall"
 	"time"
@@ -13,6 +12,7 @@ import (
 
 var (
 	shutdownDuration = 5 * time.Second
+	applicationPort  = "0.0.0.0:8084"
 )
 
 func main() {
@@ -20,7 +20,6 @@ func main() {
 	defer cancel()
 
 	service := service.NewNotificationService()
-	addr := os.Getenv("SERVICE_ADDRES")
 
-	myhttp.MustRun(ctx, addr, service, shutdownDuration)
+	myhttp.MustRun(ctx, applicationPort, service, shutdownDuration)
 }

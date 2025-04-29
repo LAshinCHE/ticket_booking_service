@@ -1,0 +1,235 @@
+version: "3.8"
+
+services:
+  booking-service:
+    build: ./booking-service
+    ports:
+      - "8081:8081"
+    networks:
+      - monitoring
+    environment:
+      - DB_HOST=booking-db
+      - DB_PORT=5432
+
+  ticket-service:
+    build: ./ticket-service
+    ports:
+      - "8082:8082"
+    networks:
+      - monitoring
+    environment:
+      - DB_HOST=ticket-db
+      - DB_PORT=5432
+
+  payment-service:
+    build: ./payment-service
+    ports:
+      - "8083:8083"
+    networks:
+      - monitoring
+    environment:
+      - DB_HOST=payment-db
+      - DB_PORT=5432
+
+  notification-service:
+    build: ./notification-service
+    ports:
+      - "8084:8080"
+    networks:
+      - monitoring
+
+  saga-service:
+    build: ./saga-service
+    ports:
+      - "8085:8085"
+    depends_on:
+      - temporal
+    environment:
+      - TEMPORAL_ADDRESS=temporal:7233
+    restart: unless-stopped
+    networks:
+      - monitoring
+
+  booking-db:
+    image: postgres:14
+    restart: always
+    environment:
+      POSTGRES_USER: booking
+      POSTGRES_PASSWORD: bookingpass
+      POSTGRES_DB: bookingdb
+    ports:
+      - "5431:5432"
+    networks:
+      - monitoring
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "booking"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  ticket-db:
+    image: postgres:14
+    restart: always
+    environment:
+      POSTGRES_USER: ticket
+      POSTGRES_PASSWORD: ticketpass
+      POSTGRES_DB: ticketdb
+    ports:
+      - "5433:5432"
+    networks:
+      - monitoring
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "ticket"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  payment-db:
+    image: postgres:14
+    restart: always
+    environment:
+      POSTGRES_USER: payment
+      POSTGRES_PASSWORD: paymentpass
+      POSTGRES_DB: paymentdb
+    ports:
+      - "5434:5432"
+    networks:
+      - monitoring
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "payment"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - monitoring
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    depends_on:
+      - prometheus
+    networks:
+      - monitoring
+
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: jaeger
+    ports:
+      - "16686:16686"
+      - "4318:4318"
+    networks:
+      - monitoring
+
+  tempo:
+    image: grafana/tempo:latest
+    container_name: tempo
+    ports:
+      - "3200:3200"
+      - "4317:4317"
+      - "5318:4318"
+    command: [ "-config.file=/etc/tempo.yaml" ]
+    volumes:
+      - ./tempo/tempo.yaml:/etc/tempo.yaml
+    networks:
+      - monitoring
+
+  postgres-exporter-booking:
+    image: prometheuscommunity/postgres-exporter
+    environment:
+      DATA_SOURCE_NAME: "postgresql://booking:bookingpass@booking-db:5432/bookingdb?sslmode=disable"
+    ports:
+      - "9187:9187"
+    networks:
+      - monitoring
+
+  postgres-exporter-ticket:
+    image: prometheuscommunity/postgres-exporter
+    environment:
+      DATA_SOURCE_NAME: "postgresql://ticket:ticketpass@ticket-db:5432/ticketdb?sslmode=disable"
+    ports:
+      - "9188:9188"
+    networks:
+      - monitoring
+
+  temporal:
+    image: temporalio/auto-setup:1.22
+    ports:
+      - "7233:7233"   # Temporal frontend
+    environment:
+      - DB=postgresql
+      - DB_PORT=5432
+      - POSTGRES_USER=temporal
+      - POSTGRES_PWD=temporal
+      - POSTGRES_SEEDS=temporal-postgres
+      - SERVICES=frontend,history,matching,worker
+      - TEMPORAL_BROADCAST_ADDRESS=temporal
+    depends_on:
+      - temporal-postgres
+
+  temporal-postgres:
+    image: postgres:13
+    environment:
+      POSTGRES_USER: temporal
+      POSTGRES_PASSWORD: temporal
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "temporal"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  temporal-admin-tools:
+    image: temporalio/admin-tools:1.22
+    depends_on:
+      - temporal
+    entrypoint: /bin/sh
+    tty: true
+
+  temporal-web:
+    image: temporalio/web:latest
+    ports:
+      - "8088:8088"   # Web UI
+    environment:
+      - TEMPORAL_GRPC_ENDPOINT=temporal:7233
+      - TEMPORAL_PERMIT_WRITE_API=true
+    depends_on:
+      - temporal
+
+  temporal-db:
+    image: postgres:13
+    container_name: temporal-db
+    environment:
+      POSTGRES_USER: temporal
+      POSTGRES_PASSWORD: temporal
+      POSTGRES_DB: temporal
+    ports:
+      - "5432:5432"
+    volumes:
+      - temporal_pgdata:/var/lib/postgresql/data
+    networks:
+      - monitoring
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "temporal"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  monitoring:
+    driver: bridge
+
+volumes:
+  temporal_pgdata:

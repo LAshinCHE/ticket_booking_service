@@ -9,7 +9,7 @@ RUN go mod download
 
 COPY . .
 
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o ticket-service ./cmd/main.go
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o saga-service ./cmd/main.go
 
 FROM alpine:latest
 
@@ -17,8 +17,8 @@ RUN apk --no-cache add ca-certificates
 
 WORKDIR /root/
 
-COPY --from=builder /app/ticket-service .
+COPY --from=builder /app/saga-service .
 
-EXPOSE 8080
+EXPOSE 8085
 
-ENTRYPOINT ["./ticket-service"]
+ENTRYPOINT ["./saga-service"]

@@ -1,18 +1,28 @@
 package workflow
 
 import (
+	"context"
 	"time"
 
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
 	"go.temporal.io/sdk/workflow"
 
-	"github.com/LAshinCHE/ticket_booking_service/saga-orchestrator/activities"
+	"github.com/LAshinCHE/ticket_booking_service/saga-service/activities"
 )
 
-// BookingSagaWorkflow — сам воркфлоу.
-func BookingSagaWorkflow(ctx workflow.Context, p BookingParams) error {
+func BookingSagaWorkflow(ctx workflow.Context, input BookingWorkflowInput) error {
+
+	propagator := propagation.TraceContext{}
+	traceCarrier := propagation.MapCarrier(input.TraceCtx)
+	realCtx := propagator.Extract(context.Background(), traceCarrier)
+
+	_, span := otel.Tracer("saga-service").Start(realCtx, "BookingSagaWorkflow")
+	defer span.End()
+
 	logger := workflow.GetLogger(ctx)
 	logger.Info("Saga started",
-		"UserID", p.UserID, "TicketID", p.TicketID, "Price", p.Price)
+		"UserID", input.Params.UserID, "TicketID", input.Params.TicketID, "Price", input.Params.Price)
 
 	// Настраиваем Activity-опции (таймауты / ретраи при желании)
 	ctx = workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
@@ -26,7 +36,7 @@ func BookingSagaWorkflow(ctx workflow.Context, p BookingParams) error {
 	// 1. Создаём бронирование
 	var bookingID string
 	if err := workflow.ExecuteActivity(ctx,
-		acts.CreateBooking, p.UserID, p.TicketID, p.Price).
+		acts.CreateBooking, input.Params.UserID, input.Params.TicketID, input.Params.Price).
 		Get(ctx, &bookingID); err != nil {
 		return err
 	}
@@ -37,31 +47,31 @@ func BookingSagaWorkflow(ctx workflow.Context, p BookingParams) error {
 	// 2. Проверяем наличие билета
 	var ok bool
 	if err := workflow.ExecuteActivity(ctx,
-		acts.CheckTicketAvailability, p.TicketID).Get(ctx, &ok); err != nil {
+		acts.CheckTicketAvailability, input.Params.TicketID).Get(ctx, &ok); err != nil {
 		return err
 	}
 	if !ok {
-		return workflow.NewContinueAsNewError(ctx, BookingSagaWorkflow, p) // или любая ваша ошибка
+		return workflow.NewContinueAsNewError(ctx, BookingSagaWorkflow, input) // или любая ваша ошибка
 	}
 
 	//----------------------------------------------------------------------
 	// 3. Резервируем билет
 	if err := workflow.ExecuteActivity(ctx,
-		acts.ReserveTicket, p.TicketID).Get(ctx, nil); err != nil {
+		acts.ReserveTicket, input.Params.TicketID).Get(ctx, nil); err != nil {
 		return err
 	}
 
 	//----------------------------------------------------------------------
 	// 4. Списываем деньги
 	if err := workflow.ExecuteActivity(ctx,
-		acts.WithdrawMoney, p.UserID, p.Price, bookingID).Get(ctx, nil); err != nil {
+		acts.WithdrawMoney, input.Params.UserID, input.Params.Price, bookingID).Get(ctx, nil); err != nil {
 		return err
 	}
-	defer workflow.ExecuteActivity(ctx, acts.CancelWithdrawMoney, p.UserID, p.Price).Get(ctx, nil)
-	//----------------------------------------------------------------------
+	defer workflow.ExecuteActivity(ctx, acts.CancelWithdrawMoney, input.Params.UserID, input.Params.Price).Get(ctx, nil) // возвращаем деньги в случае ошибки
+
 	// 5. Уведомляем пользователя (не критично, поэтому без проверки Get)
 	_ = workflow.ExecuteActivity(ctx,
-		acts.NotifyUser, p.UserID, "Бронирование успешно").Get(ctx, nil)
+		acts.NotifyUser, input.Params.UserID, "Бронирование успешно").Get(ctx, nil)
 
 	logger.Info("Saga finished OK", "BookingID", bookingID)
 	return nil

@@ -21,6 +21,7 @@ func MustRun(ctx context.Context, addr string, app NotificationService, shutdowm
 	}
 
 	r := mux.NewRouter()
+	r.HandleFunc("/", h.HealthCheck).Methods("GET")
 	r.HandleFunc("/notify", h.Notify).Methods("GET")
 
 	server := http.Server{
@@ -63,6 +64,10 @@ func (h *Handler) Notify(w http.ResponseWriter, r *http.Request) {
 			UserID:  userID,
 			Message: message,
 		})
+}
+
+func (h *Handler) HealthCheck(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte("Hello"))
 }
 
 type Handler struct {

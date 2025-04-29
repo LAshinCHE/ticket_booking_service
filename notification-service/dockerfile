@@ -1,27 +1,24 @@
-FROM golang:1.24-alpine AS builder
-
-RUN apk add --no-cache git
+FROM golang:1.24 as builder
 
 WORKDIR /app
 
 COPY go.mod go.sum ./
+
 RUN go mod download
+
 
 COPY . .
 
-RUN go build -o notification-service ./cmd/main.go
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o notification-service ./cmd/main.go
 
-FROM alpine:3.19
+FROM alpine:latest
 
-WORKDIR /app
+RUN apk --no-cache add ca-certificates
 
-# Устанавливаем сертификаты (для HTTPS-запросов, если они есть)
-RUN apk add --no-cache ca-certificates
-
+WORKDIR /root/
 
 COPY --from=builder /app/notification-service .
 
-ENV PORT=8084
 EXPOSE 8084
 
 ENTRYPOINT ["./notification-service"]

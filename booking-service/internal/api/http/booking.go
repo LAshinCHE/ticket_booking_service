@@ -11,9 +11,11 @@ import (
 	_ "github.com/LAshinCHE/ticket_booking_service/booking-service/docs"
 	"github.com/LAshinCHE/ticket_booking_service/booking-service/internal/api/http/types"
 	"github.com/LAshinCHE/ticket_booking_service/booking-service/internal/models"
+	"github.com/LAshinCHE/ticket_booking_service/booking-service/internal/tracer"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	httpSwagger "github.com/swaggo/http-swagger"
+	"go.opentelemetry.io/otel"
 )
 
 //go:generate mockgen -package http -source=http.go -destination http_mocks.go
@@ -31,6 +33,8 @@ func MustRun(ctx context.Context, shutdownDur time.Duration, addr string, app se
 	handler := &Handler{
 		service: app,
 	}
+
+	tracer.MustSetup(ctx, "booking-service")
 
 	// mux := http.NewServeMux()
 	r := mux.NewRouter()
@@ -73,6 +77,8 @@ func MustRun(ctx context.Context, shutdownDur time.Duration, addr string, app se
 // @Success 200 {string} string "hello"
 // @Router / [get]
 func (h *Handler) HealthCheck(writer http.ResponseWriter, request *http.Request) {
+	_, span := otel.Tracer("booking-service").Start(request.Context(), "HealthCheck")
+	defer span.End()
 	writer.Write([]byte("hello"))
 }
 
@@ -98,17 +104,23 @@ func (h *Handler) GetBookingByIDHandler(writer http.ResponseWriter, request *htt
 }
 
 func (h *Handler) CreateBookingHandler(writer http.ResponseWriter, request *http.Request) {
+	ctx, span := otel.Tracer("booking-service").Start(request.Context(), "CreateBookingHandler")
+	defer span.End()
+
 	data, err := types.CreateBooking(request)
 	if err != nil {
 		http.Error(writer, err.Error(), http.StatusBadRequest)
 	}
 
-	err = h.service.CreateBooking(request.Context(), data)
+	err = h.service.CreateBooking(ctx, data)
 
 	types.ProcessError(writer, err, &types.GetBookingByIDHandlerResponse{})
 }
 
 func (h *Handler) CreateBookingInternalHandler(w http.ResponseWriter, r *http.Request) {
+	ctx, span := otel.Tracer("booking-service").Start(r.Context(), "CreateBookingHandler")
+	defer span.End()
+
 	var req types.CreateBookingInternalRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "invalid request", http.StatusBadRequest)
@@ -121,13 +133,16 @@ func (h *Handler) CreateBookingInternalHandler(w http.ResponseWriter, r *http.Re
 		TicketID: uuid.MustParse(req.TicketID),
 	}
 
-	err := h.service.CreateBookingInternal(r.Context(), booking)
+	err := h.service.CreateBookingInternal(ctx, booking)
 
 	types.ProcessError(w, err, &types.CreateBookingResponse{BookingID: bookingID})
 	w.WriteHeader(http.StatusOK)
 }
 
 func (h *Handler) DeleteBookingInternalHandler(w http.ResponseWriter, r *http.Request) {
+	ctx, span := otel.Tracer("booking-service").Start(r.Context(), "DeleteBookingInternalHandler")
+	defer span.End()
+
 	var req types.DeleteBookingInternalRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "invalid request", http.StatusBadRequest)
@@ -136,7 +151,7 @@ func (h *Handler) DeleteBookingInternalHandler(w http.ResponseWriter, r *http.Re
 
 	bookingID := uuid.MustParse(req.BookingID)
 
-	if err := h.service.DeleteBookingInternal(r.Context(), bookingID); err != nil {
+	if err := h.service.DeleteBookingInternal(ctx, bookingID); err != nil {
 		http.Error(w, "failed to create booking", http.StatusInternalServerError)
 		return
 	}

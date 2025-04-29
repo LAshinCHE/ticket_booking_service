@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	applicationPort = ":8081"
+	applicationPort = ":8082"
 
 	watchDuration    = 3 * time.Second
 	shutdownDuration = 5 * time.Second
@@ -25,7 +25,7 @@ const (
 // @version 1.0
 // @description API для сервиса бронирования
 
-// @host localhost:8081
+// @host localhost:8082
 // @BasePath /
 
 func main() {

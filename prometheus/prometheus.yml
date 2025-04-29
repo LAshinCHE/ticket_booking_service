@@ -1,0 +1,39 @@
+global:
+  scrape_interval: 5s
+
+scrape_configs:
+  - job_name: 'booking-service'
+    static_configs:
+      - targets: ['booking-service:8080']
+
+  - job_name: 'ticket-service'
+    static_configs:
+      - targets: ['ticket-service:8082']
+
+  - job_name: 'payment-service'
+    static_configs:
+      - targets: ['payment-service:8083']
+
+  - job_name: 'notification-service'
+    static_configs:
+      - targets: ['notification-service:8084']
+
+  - job_name: 'notification-service'
+    static_configs:
+      - targets: ['notification-service:8085']
+
+  - job_name: 'booking-db'
+    static_configs:
+      - targets: ['postgres-exporter-booking:9187']
+
+  - job_name: 'ticket-db'
+    static_configs:
+      - targets: ['postgres-exporter-ticket:9187']
+
+  - job_name: 'payment-db'
+    static_configs:
+      - targets: ['postgres-exporter-payment:9187']
+
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['prometheus:9090']

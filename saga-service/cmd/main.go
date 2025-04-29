@@ -6,9 +6,9 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/LAshinCHE/ticket_booking_service/saga-orchestrator/activities"
-	"github.com/LAshinCHE/ticket_booking_service/saga-orchestrator/clients"
-	sagawf "github.com/LAshinCHE/ticket_booking_service/saga-orchestrator/workflow"
+	"github.com/LAshinCHE/ticket_booking_service/saga-service/activities"
+	"github.com/LAshinCHE/ticket_booking_service/saga-service/clients"
+	sagawf "github.com/LAshinCHE/ticket_booking_service/saga-service/workflow"
 	"go.temporal.io/sdk/worker"
 )
 
@@ -20,10 +20,10 @@ func main() {
 	defer tc.Client.Close()
 
 	svcs := activities.NewServiceClients(
-		"http://booking:8080",
-		"http://ticket:8081",
-		"http://payment:8082",
-		"http://notify:8083",
+		"http://localhost:8080",
+		"http://localhost:8082",
+		"http://localhost:8083",
+		"http://localhost:8084",
 	)
 	acts := activities.NewBookingActivities(svcs)
 

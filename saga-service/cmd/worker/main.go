@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -14,7 +13,7 @@ import (
 )
 
 func main() {
-	fmt.Println("Try listen service 0.0.0.0:7233")
+	log.Println("Try listen service 0.0.0.0:7233")
 	tc, err := client.Dial(client.Options{
 		HostPort: "temporal:7233",
 	})
@@ -23,7 +22,7 @@ func main() {
 	}
 	defer tc.Close()
 	svcs := activities.NewServiceClients(
-		"http://localhost:8080",
+		"http://localhost:8081",
 		"http://localhost:8082",
 		"http://localhost:8083",
 		"http://localhost:8084",

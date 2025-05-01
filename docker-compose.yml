@@ -6,8 +6,10 @@ services:
     ports:
       - "8081:8081"
     depends_on:
+      - jaeger
       - temporal
     environment:
+      - JAEGER_ENDPOINT=jaeger:4318
       - DB_HOST=booking-db
       - DB_PORT=5432
       - TEMPORAL_ADDRESS=temporal:7233
@@ -131,9 +133,11 @@ services:
     image: jaegertracing/all-in-one:latest
     container_name: jaeger
     ports:
-      - "16686:16686"
+      - "16686:16686"  
+      - "4318:4318" 
     networks:
       - monitoring
+    
 
   tempo:
     image: grafana/tempo:latest

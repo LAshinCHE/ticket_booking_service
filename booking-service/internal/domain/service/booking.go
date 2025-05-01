@@ -60,13 +60,13 @@ func (b *Booking) DeleteBookingInternal(ctx context.Context, bookingID uuid.UUID
 	return b.RepositoryBooking.DeleteBookingByID(ctx, bookingID)
 }
 
-func (b *Booking) CreateBooking(ctx context.Context, req models.CreateBookingData) error {
+func (b *Booking) CreateBooking(ctx context.Context, req models.CreateBookingData) (uuid.UUID, error) {
 	req.ID = uuid.New()
 
 	if err := b.SagaClient.StartBookingSaga(ctx, req); err != nil {
 		log.Printf("failed to start booking saga: %v", err)
-		return err
+		return uuid.Nil, err
 	}
 
-	return nil
+	return req.ID, nil
 }

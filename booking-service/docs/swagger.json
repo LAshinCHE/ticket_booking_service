@@ -29,6 +29,52 @@
                 }
             }
         },
+        "/booking/": {
+            "post": {
+                "description": "Создание бронирования пользователем",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "booking"
+                ],
+                "summary": "Создать бронь",
+                "parameters": [
+                    {
+                        "description": "Данные для создания брони",
+                        "name": "booking",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.CreateBookingData"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.CreateBookingResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "bad request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "internal server error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/booking/{booking_id}": {
             "get": {
                 "description": "Возвращает информацию о бронировании",
@@ -109,6 +155,31 @@
                 "BookingStatusPaid",
                 "BookingStatusCanceled"
             ]
+        },
+        "models.CreateBookingData": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "price": {
+                    "type": "number"
+                },
+                "ticketID": {
+                    "type": "string"
+                },
+                "userID": {
+                    "type": "integer"
+                }
+            }
+        },
+        "types.CreateBookingResponse": {
+            "type": "object",
+            "properties": {
+                "bookingID": {
+                    "type": "string"
+                }
+            }
         },
         "types.GetBookingByIDHandlerResponse": {
             "type": "object",

@@ -3,6 +3,7 @@ package metrics
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -30,7 +31,7 @@ func InitMetrics() {
 		metric.WithDescription("Total number of notified positions by contact"),
 	)
 	if err != nil {
-		panic(fmt.Sprintf("failed to create metric: %v", err))
+		log.Fatalf("failed to create metric: %v", err)
 	}
 
 	okRespByHandlerTotal, err = meter.Int64Counter(
@@ -38,7 +39,7 @@ func InitMetrics() {
 		metric.WithDescription("Total number of OK responses by handler"),
 	)
 	if err != nil {
-		panic(fmt.Sprintf("failed to create metric: %v", err))
+		log.Fatalf("failed to create metric: %v", err)
 	}
 
 	badRespByHandlerTotal, err = meter.Int64Counter(
@@ -46,7 +47,7 @@ func InitMetrics() {
 		metric.WithDescription("Total number of BAD responses by handler with response code"),
 	)
 	if err != nil {
-		panic(fmt.Sprintf("failed to create metric: %v", err))
+		log.Fatalf("failed to create metric: %v", err)
 	}
 }
 

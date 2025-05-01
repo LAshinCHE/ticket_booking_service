@@ -28,6 +28,22 @@ definitions:
     - BookingStatusReserved
     - BookingStatusPaid
     - BookingStatusCanceled
+  models.CreateBookingData:
+    properties:
+      id:
+        type: string
+      price:
+        type: number
+      ticketID:
+        type: string
+      userID:
+        type: integer
+    type: object
+  types.CreateBookingResponse:
+    properties:
+      bookingID:
+        type: string
+    type: object
   types.GetBookingByIDHandlerResponse:
     properties:
       booking:
@@ -53,6 +69,36 @@ paths:
       summary: Health check
       tags:
       - health
+  /booking/:
+    post:
+      consumes:
+      - application/json
+      description: Создание бронирования пользователем
+      parameters:
+      - description: Данные для создания брони
+        in: body
+        name: booking
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateBookingData'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.CreateBookingResponse'
+        "400":
+          description: bad request
+          schema:
+            type: string
+        "500":
+          description: internal server error
+          schema:
+            type: string
+      summary: Создать бронь
+      tags:
+      - booking
   /booking/{booking_id}:
     get:
       description: Возвращает информацию о бронировании

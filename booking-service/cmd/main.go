@@ -11,7 +11,9 @@ import (
 	internalhttp "github.com/LAshinCHE/ticket_booking_service/booking-service/internal/api/http"
 	"github.com/LAshinCHE/ticket_booking_service/booking-service/internal/client"
 	"github.com/LAshinCHE/ticket_booking_service/booking-service/internal/domain/service"
+	"github.com/LAshinCHE/ticket_booking_service/booking-service/internal/metrics"
 	"github.com/LAshinCHE/ticket_booking_service/booking-service/internal/repository"
+	"github.com/LAshinCHE/ticket_booking_service/booking-service/internal/tracer"
 )
 
 const (
@@ -37,6 +39,9 @@ func main() {
 		log.Fatalf("Could not initialize Database connection %s", err)
 	}
 	defer db.Close()
+
+	tracer.MustSetup(ctx, "booking-service")
+	metrics.InitMetrics()
 
 	repoBooking := repository.NewRepository(db)
 

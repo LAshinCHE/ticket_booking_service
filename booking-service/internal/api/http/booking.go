@@ -11,7 +11,6 @@ import (
 	_ "github.com/LAshinCHE/ticket_booking_service/booking-service/docs"
 	"github.com/LAshinCHE/ticket_booking_service/booking-service/internal/api/http/types"
 	"github.com/LAshinCHE/ticket_booking_service/booking-service/internal/models"
-	"github.com/LAshinCHE/ticket_booking_service/booking-service/internal/tracer"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	httpSwagger "github.com/swaggo/http-swagger"
@@ -23,7 +22,7 @@ type (
 	service interface {
 		CheckTicketIsBooking(ctx context.Context, ticketID uuid.UUID) (bool, error)
 		GetBookingByID(ctx context.Context, id uuid.UUID) (*models.Booking, error)
-		CreateBooking(ctx context.Context, req models.CreateBookingData) error
+		CreateBooking(ctx context.Context, req models.CreateBookingData) (uuid.UUID, error)
 		CreateBookingInternal(ctx context.Context, req models.Booking) error
 		DeleteBookingInternal(ctx context.Context, id uuid.UUID) error
 	}
@@ -33,8 +32,6 @@ func MustRun(ctx context.Context, shutdownDur time.Duration, addr string, app se
 	handler := &Handler{
 		service: app,
 	}
-
-	tracer.MustSetup(ctx, "booking-service")
 
 	// mux := http.NewServeMux()
 	r := mux.NewRouter()
@@ -103,6 +100,17 @@ func (h *Handler) GetBookingByIDHandler(writer http.ResponseWriter, request *htt
 	types.ProcessError(writer, err, &types.GetBookingByIDHandlerResponse{Booking: booking})
 }
 
+// CreateBookingHandler godoc
+// @Summary Создать бронь
+// @Description Создание бронирования пользователем
+// @Tags booking
+// @Accept json
+// @Produce json
+// @Param booking body models.CreateBookingData true "Данные для создания брони"
+// @Success 200 {object} types.CreateBookingResponse
+// @Failure 400 {string} string "bad request"
+// @Failure 500 {string} string "internal server error"
+// @Router /booking/ [post]
 func (h *Handler) CreateBookingHandler(writer http.ResponseWriter, request *http.Request) {
 	ctx, span := otel.Tracer("booking-service").Start(request.Context(), "CreateBookingHandler")
 	defer span.End()
@@ -112,9 +120,9 @@ func (h *Handler) CreateBookingHandler(writer http.ResponseWriter, request *http
 		http.Error(writer, err.Error(), http.StatusBadRequest)
 	}
 
-	err = h.service.CreateBooking(ctx, data)
+	id, err := h.service.CreateBooking(ctx, data)
 
-	types.ProcessError(writer, err, &types.GetBookingByIDHandlerResponse{})
+	types.ProcessError(writer, err, &types.CreateBookingResponse{BookingID: id})
 }
 
 func (h *Handler) CreateBookingInternalHandler(w http.ResponseWriter, r *http.Request) {
@@ -126,16 +134,16 @@ func (h *Handler) CreateBookingInternalHandler(w http.ResponseWriter, r *http.Re
 		http.Error(w, "invalid request", http.StatusBadRequest)
 		return
 	}
-	bookingID := uuid.New()
+	bokingId := uuid.MustParse(req.BookingID)
 	booking := models.Booking{
-		ID:       bookingID,
+		ID:       bokingId,
 		UserID:   req.UserID,
 		TicketID: uuid.MustParse(req.TicketID),
 	}
 
 	err := h.service.CreateBookingInternal(ctx, booking)
 
-	types.ProcessError(w, err, &types.CreateBookingResponse{BookingID: bookingID})
+	types.ProcessError(w, err, &types.CreateBookingResponse{BookingID: bokingId})
 	w.WriteHeader(http.StatusOK)
 }
 

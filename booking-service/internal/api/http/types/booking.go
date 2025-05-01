@@ -20,8 +20,9 @@ type CreateBookingResponse struct {
 }
 
 type CreateBookingInternalRequest struct {
-	UserID   int64  `json:"user_id"`
-	TicketID string `json:"ticket_id"`
+	BookingID string `json:"booking_id"`
+	UserID    int64  `json:"user_id"`
+	TicketID  string `json:"ticket_id"`
 }
 
 type DeleteBookingInternalRequest struct {

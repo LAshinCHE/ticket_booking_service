@@ -1,0 +1,64 @@
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+	"math/rand"
+	"os"
+	"time"
+
+	"github.com/google/uuid"
+)
+
+var ticketIDs []uuid.UUID
+
+func main() {
+	rand.Seed(time.Now().UnixNano())
+
+	fileTicket, err := os.Create("ticket_data.sql")
+	if err != nil {
+		panic(err)
+	}
+	defer fileTicket.Close()
+	fileIds, err := os.Create("ids")
+	if err != nil {
+		panic(err)
+	}
+	defer fileIds.Close()
+
+	for i := 0; i <= 300; i++ {
+		id := uuid.New()
+		price := rand.Float64()*400 + 100
+		available := rand.Intn(2) == 0
+
+		fmt.Fprintf(fileTicket, "INSERT INTO tickets (id, price, available) VALUES ('%s', %.2f, %t);\n", id, price, available)
+		ticketIDs = append(ticketIDs, id)
+	}
+
+	fmt.Println("SQL данные записаны в файл seed_data_ticket.sql")
+	saveIDs(ticketIDs, "ticket_ids.json")
+}
+
+func saveIDs(ids []uuid.UUID, name string) {
+	file, err := os.Create(name)
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+	encoder := json.NewEncoder(file)
+	encoder.SetIndent("", " ")
+	err = encoder.Encode(ids)
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println("Данные успешно сгенерированы.")
+}
+
+func escape(s string) string {
+	return replace(s, "'", "''")
+}
+
+func replace(s, old, new string) string {
+	return string([]rune(s))
+}

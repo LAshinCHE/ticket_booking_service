@@ -66,7 +66,7 @@ services:
     networks:
       - monitoring
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "booking"]
+      test: ["CMD", "pg_isready", "-U", "booking", "-d", "bookingdb"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -83,7 +83,7 @@ services:
     networks:
       - monitoring
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "ticket"]
+      test: ["CMD", "pg_isready", "-U", "ticketdb"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -146,23 +146,33 @@ services:
     command: ["--config.file=/etc/tempo.yaml"]
     networks:
       - monitoring
-  postgres-exporter-booking:
-    image: prometheuscommunity/postgres-exporter
-    environment:
-      DATA_SOURCE_NAME: "postgresql://booking:bookingpass@booking-db:5432/bookingdb?sslmode=disable"
-    ports:
-      - "9187:9187"
-    networks:
-      - monitoring
+  # postgres-exporter-booking:
+  #   image: prometheuscommunity/postgres-exporter
+  #   environment:
+  #     DATA_SOURCE_NAME: "postgresql://booking:bookingpass@bookingdb:5432/bookingdb?sslmode=disable"
+  #   ports:
+  #     - "9187:9187"
+  #   networks:
+  #     - monitoring
 
-  postgres-exporter-ticket:
-    image: prometheuscommunity/postgres-exporter
-    environment:
-      DATA_SOURCE_NAME: "postgresql://ticket:ticketpass@ticket-db:5432/ticketdb?sslmode=disable"
-    ports:
-      - "9188:9188"
-    networks:
-      - monitoring
+  # postgres-exporter-ticket:
+  #   image: prometheuscommunity/postgres-exporter
+  #   environment:
+  #     DATA_SOURCE_NAME: "postgresql://ticket:ticketpass@ticketdb:5432/ticketdb?sslmode=disable"
+  #   ports:
+  #     - "9188:9188"
+  #   networks:
+  #     - monitoring
+  
+  # postgres-exporter-payment:
+  #   image: prometheuscommunity/postgres-exporter
+  #   environment:
+  #     DATA_SOURCE_NAME: "postgresql://payment:paymentpass@paymentdb:5432/paymentdb?sslmode=disable"
+  #   ports:
+  #     - "9189:9189"
+  #   networks:
+  #     - monitoring
+  
   
   temporal:
       image: temporalio/auto-setup:1.22

@@ -1,9 +1,9 @@
 -- +goose Up
 -- +goose StatementBegin
 CREATE TABLE bookings (
-    id UUID PRIMARY KEY,
-    user_id UUID NOT NULL,
-    ticket_id UUID NOT NULL,
+    id int PRIMARY KEY,
+    user_id int NOT NULL,
+    ticket_id int NOT NULL,
     status TEXT NOT NULL,
     created_at TIMESTAMP DEFAULT now(),
     updated_at TIMESTAMP DEFAULT now()

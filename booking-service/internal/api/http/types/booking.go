@@ -3,9 +3,9 @@ package types
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 
 	"github.com/LAshinCHE/ticket_booking_service/booking-service/internal/models"
-	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 )
 
@@ -16,31 +16,30 @@ type GetBookingByIDHandlerResponse struct {
 }
 
 type CreateBookingResponse struct {
-	BookingID uuid.UUID
+	BookingID int
 }
 
 type CreateBookingInternalRequest struct {
-	BookingID string `json:"booking_id"`
-	UserID    int64  `json:"user_id"`
-	TicketID  string `json:"ticket_id"`
+	BookingID int `json:"booking_id"`
+	UserID    int `json:"user_id"`
+	TicketID  int `json:"ticket_id"`
 }
 
 type DeleteBookingInternalRequest struct {
-	BookingID string `json:"booking_id"`
+	BookingID int               `json:"booking_id"`
+	TraceMap  map[string]string `json:"trace_map"`
 }
 
-func GetBookingByID(r *http.Request) (uuid.UUID, error) {
+func GetBookingByID(r *http.Request) (int, error) {
 	vars := mux.Vars(r)
-	uuidStr, ok := vars["booking_id"]
-	if !ok || len(uuidStr) == 0 {
-		return uuid.Nil, MissingUUID
+	idStr, ok := vars["booking_id"]
+	if !ok {
+		return 0, MissingUUID
 	}
-
-	id, err := uuid.Parse(uuidStr)
+	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		return uuid.Nil, InvalidUUID
+		return 0, err
 	}
-
 	return id, nil
 }
 

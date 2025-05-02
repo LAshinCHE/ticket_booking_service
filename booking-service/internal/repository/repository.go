@@ -7,14 +7,14 @@ import (
 	"github.com/LAshinCHE/ticket_booking_service/booking-service/internal/models"
 	"github.com/LAshinCHE/ticket_booking_service/booking-service/internal/repository/schemas"
 	"github.com/georgysavva/scany/v2/pgxscan"
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"go.opentelemetry.io/otel"
 
 	sq "github.com/Masterminds/squirrel"
 )
 
 const (
-	bookingTable = "booking"
+	bookingTable = "bookings"
 )
 
 var (
@@ -31,7 +31,7 @@ func NewRepository(driver *pgxpool.Pool) *Repository {
 	}
 }
 
-func (r *Repository) GetBookingByID(ctx context.Context, bookingID uuid.UUID) (*models.Booking, error) {
+func (r *Repository) GetBookingByID(ctx context.Context, bookingID int) (*models.Booking, error) {
 	query := sq.Select(bookingColumns...).
 		From(bookingTable).
 		Where("id = $1", bookingID).PlaceholderFormat(sq.Dollar)
@@ -50,7 +50,7 @@ func (r *Repository) GetBookingByID(ctx context.Context, bookingID uuid.UUID) (*
 	return ToDomainBooking(booking), nil
 }
 
-func (r *Repository) CheckTicketIsBooked(ctx context.Context, ticketID uuid.UUID) (bool, error) {
+func (r *Repository) CheckTicketIsBooked(ctx context.Context, ticketID int) (bool, error) {
 	var exists bool
 
 	query := `
@@ -68,9 +68,11 @@ func (r *Repository) CheckTicketIsBooked(ctx context.Context, ticketID uuid.UUID
 }
 
 func (r *Repository) CreateBooking(ctx context.Context, booking models.Booking) error {
+	ctx, span := otel.Tracer("booking-service").Start(ctx, "Repository.Booking.CreateBooking")
+	defer span.End()
 	query := sq.Insert(bookingTable).
-		Columns("id", "user_id", "ticket_id").
-		Values(booking.ID, booking.UserID, booking.TicketID).
+		Columns("id", "user_id", "ticket_id", "status").
+		Values(booking.ID, booking.UserID, booking.TicketID, booking.Status).
 		PlaceholderFormat(sq.Dollar)
 
 	queryString, args, err := query.ToSql()
@@ -86,7 +88,7 @@ func (r *Repository) CreateBooking(ctx context.Context, booking models.Booking) 
 	return nil
 }
 
-func (r *Repository) DeleteBookingByID(ctx context.Context, bookingID uuid.UUID) error {
+func (r *Repository) DeleteBookingByID(ctx context.Context, bookingID int) error {
 	query := sq.Delete(bookingTable).
 		Where(sq.Eq{"id": bookingID}).
 		PlaceholderFormat(sq.Dollar)
@@ -103,7 +105,7 @@ func (r *Repository) DeleteBookingByID(ctx context.Context, bookingID uuid.UUID)
 
 	rowAffected := result.RowsAffected()
 	if rowAffected == 0 {
-		return fmt.Errorf("no booking found with id: %s", bookingID)
+		return fmt.Errorf("no booking found with id: %d", bookingID)
 	}
 
 	return nil

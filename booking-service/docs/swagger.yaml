@@ -3,11 +3,11 @@ definitions:
   models.Booking:
     properties:
       id:
-        type: string
+        type: integer
       status:
         $ref: '#/definitions/models.BookingStatus'
       ticketID:
-        type: string
+        type: integer
       userID:
         type: integer
     type: object
@@ -31,18 +31,18 @@ definitions:
   models.CreateBookingData:
     properties:
       id:
-        type: string
+        type: integer
       price:
-        type: number
+        type: integer
       ticketID:
-        type: string
+        type: integer
       userID:
         type: integer
     type: object
   types.CreateBookingResponse:
     properties:
       bookingID:
-        type: string
+        type: integer
     type: object
   types.GetBookingByIDHandlerResponse:
     properties:

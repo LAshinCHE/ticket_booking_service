@@ -3,6 +3,7 @@ package workflow
 import (
 	"time"
 
+	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/workflow"
 
 	"github.com/LAshinCHE/ticket_booking_service/saga-service/activities"
@@ -12,11 +13,14 @@ func BookingSagaWorkflow(ctx workflow.Context, input BookingWorkflowInput) error
 
 	logger := workflow.GetLogger(ctx)
 	logger.Info("Saga started",
-		"UserID", input.BookingData.UserID, "TicketID", input.BookingData.TicketID, "Price", input.BookingData.Price, "TraceTx", input.TraceCtx)
+		"BookingID", input.BookingData.ID, "UserID", input.BookingData.UserID, "TicketID", input.BookingData.TicketID, "Price", input.BookingData.Price, "TraceTx", input.TraceCtx)
 
 	// Настраиваем Activity-опции (таймауты / ретраи при желании)
 	ctx = workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
-		StartToCloseTimeout: time.Minute,
+		StartToCloseTimeout: 10 * time.Second,
+		RetryPolicy: &temporal.RetryPolicy{
+			MaximumAttempts: 3,
+		},
 	})
 
 	// Нужен указатель, чтобы Temporal нашёл методы
@@ -26,7 +30,7 @@ func BookingSagaWorkflow(ctx workflow.Context, input BookingWorkflowInput) error
 	// 1. Создаём бронирование
 	var bookingID string
 	if err := workflow.ExecuteActivity(ctx,
-		acts.CreateBooking, input.BookingData.UserID, input.BookingData.TicketID, input.BookingData.Price, input.TraceCtx).
+		acts.CreateBooking, input.BookingData.ID, input.BookingData.UserID, input.BookingData.TicketID, input.BookingData.Price, input.TraceCtx).
 		Get(ctx, &bookingID); err != nil {
 		return err
 	}

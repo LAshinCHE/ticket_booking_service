@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 
 	"go.opentelemetry.io/otel"
@@ -45,8 +46,10 @@ func NewBookingActivities(svc ServiceClients) *BookingActivities { return &Booki
 // 1. Создать бронирование
 func (a *BookingActivities) CreateBooking(
 	ctx context.Context,
-	userID int64,
-	ticketID string,
+	bookingID int,
+	userID int,
+	ticketID int,
+	price float64,
 	traceCtx map[string]string,
 ) (string, error) {
 	propagator := propagation.TraceContext{}
@@ -54,19 +57,19 @@ func (a *BookingActivities) CreateBooking(
 
 	tracer := otel.Tracer("saga-activities")
 	ctx, span := tracer.Start(parentCtx, "Activity.CreateBooking")
-	log.Println("SPAN TRACE ID:", span.SpanContext().TraceID().String())
 	defer span.End()
-
+	log.Println("Booking ID:", bookingID)
 	payload := struct {
-		UserID   int64  `json:"user_id"`
-		TicketID string `json:"ticket_id"`
-	}{userID, ticketID}
+		BookingID int     `json:"booking_id"`
+		UserID    int     `json:"user_id"`
+		TicketID  int     `json:"ticket_id"`
+		Price     float64 `json:"price"`
+	}{bookingID, userID, ticketID, price}
 
 	raw, _ := json.Marshal(payload)
 	req, _ := http.NewRequestWithContext(ctx, http.MethodPost, a.SVC.BookingURL+"/internal/booking/create", bytes.NewReader(raw))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "super-secure-saga-token")
-
 	propagator.Inject(ctx, propagation.HeaderCarrier(req.Header))
 
 	resp, err := a.SVC.HTTPClient.Do(req)
@@ -92,10 +95,10 @@ func (a *BookingActivities) CreateBooking(
 // 2. Проверка билета в наличии
 func (a *BookingActivities) CheckTicketAvailability(
 	ctx context.Context,
-	ticketID string,
+	ticketID int,
 ) (bool, error) {
-
-	resBody, err := a.doGET(ctx, a.SVC.TicketURL+"/ticket/"+ticketID+"/check")
+	ticketStrID := strconv.Itoa(ticketID)
+	resBody, err := a.doGET(ctx, a.SVC.TicketURL+"/ticket/"+ticketStrID+"/check")
 	if err != nil {
 		return false, err
 	}
@@ -112,14 +115,14 @@ func (a *BookingActivities) CheckTicketAvailability(
 // 3. Перевод билета в статус «забронирован»
 func (a *BookingActivities) ReserveTicket(
 	ctx context.Context,
-	ticketID string,
+	ticketID int,
 ) error {
 
 	payload := struct {
 		Status string `json:"status"`
 	}{"reserved"}
-
-	_, err := a.doPUT(ctx, a.SVC.TicketURL+"/tickets/"+ticketID, payload)
+	ticketStrId := strconv.Itoa(ticketID)
+	_, err := a.doPUT(ctx, a.SVC.TicketURL+"/tickets/"+ticketStrId, payload)
 	return err
 }
 
@@ -127,12 +130,12 @@ func (a *BookingActivities) ReserveTicket(
 // Сharge будет проверять что у нас хватает денег на балансе и в случае нехватки возвращать ошибку
 func (a *BookingActivities) WithdrawMoney(
 	ctx context.Context,
-	userID int64,
+	userID int,
 	amount float64,
 ) error {
 
 	payload := struct {
-		UserID int64   `json:"user_id"`
+		UserID int     `json:"user_id"`
 		Amount float64 `json:"amount"`
 	}{userID, amount}
 
@@ -144,12 +147,12 @@ func (a *BookingActivities) WithdrawMoney(
 // Сharge будет проверять что у нас хватает денег на балансе и в случае нехватки возвращать ошибку
 func (a *BookingActivities) CancelWithdrawMoney(
 	ctx context.Context,
-	userID int64,
+	userID int,
 	amount float64,
 ) error {
 
 	payload := struct {
-		UserID int64   `json:"user_id"`
+		UserID int     `json:"user_id"`
 		Amount float64 `json:"amount"`
 	}{userID, amount}
 
@@ -160,12 +163,12 @@ func (a *BookingActivities) CancelWithdrawMoney(
 // 5. Уведомить пользователя
 func (a *BookingActivities) NotifyUser(
 	ctx context.Context,
-	userID int64,
+	userID int,
 	message string,
 ) error {
 
 	payload := struct {
-		UserID  int64  `json:"user_id"`
+		UserID  int    `json:"user_id"`
 		Message string `json:"message"`
 	}{userID, message}
 
@@ -177,11 +180,26 @@ func (a *BookingActivities) NotifyUser(
 
 func (a *BookingActivities) CancelBooking(
 	ctx context.Context,
-	bookingID string,
+	bookingID int,
+	traceCtx map[string]string,
 ) error {
+	propagator := propagation.TraceContext{}
+	parentCtx := propagator.Extract(context.Background(), propagation.MapCarrier(traceCtx))
 
-	req, _ := http.NewRequestWithContext(ctx, http.MethodDelete,
-		a.SVC.BookingURL+"/bookings/"+bookingID, nil)
+	tracer := otel.Tracer("saga-activities")
+	ctx, span := tracer.Start(parentCtx, "Activity.CancelBooking")
+	log.Println("SPAN TRACE ID:", span.SpanContext().TraceID().String())
+	defer span.End()
+
+	payload := struct {
+		BookingID int `json:"booking_id"`
+	}{bookingID}
+
+	raw, _ := json.Marshal(payload)
+	req, _ := http.NewRequestWithContext(ctx, http.MethodPost, a.SVC.BookingURL+"/internal/booking/delete", bytes.NewReader(raw))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "super-secure-saga-token")
+	propagator.Inject(ctx, propagation.HeaderCarrier(req.Header))
 
 	resp, err := a.SVC.HTTPClient.Do(req)
 	if err != nil {

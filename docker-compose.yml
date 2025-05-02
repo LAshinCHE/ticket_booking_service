@@ -8,11 +8,13 @@ services:
     depends_on:
       - jaeger
       - temporal
+      - booking-db
     environment:
       - JAEGER_ENDPOINT=jaeger:4318
       - TEMPORAL_ADDRESS=temporal:7233
       - DB_HOST=booking-db
       - DB_PORT=5432
+      - DATABASE_URL=postgresql://booking:bookingpass@booking-db:5432/bookingdb?sslmode=disable
     networks:
       - monitoring
 
@@ -86,7 +88,7 @@ services:
     networks:
       - monitoring
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "ticketdb"]
+      test: ["CMD", "pg_isready", "-U", "ticket", "-d", "ticketdb"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -103,7 +105,7 @@ services:
     networks:
       - monitoring
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "payment"]
+      test: ["CMD", "pg_isready", "-U", "payment", "-d", "paymentdb"]
       interval: 10s
       timeout: 5s
       retries: 5

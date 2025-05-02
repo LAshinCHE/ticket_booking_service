@@ -11,20 +11,20 @@ import (
 	_ "github.com/LAshinCHE/ticket_booking_service/booking-service/docs"
 	"github.com/LAshinCHE/ticket_booking_service/booking-service/internal/api/http/types"
 	"github.com/LAshinCHE/ticket_booking_service/booking-service/internal/models"
-	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	httpSwagger "github.com/swaggo/http-swagger"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
 )
 
 //go:generate mockgen -package http -source=http.go -destination http_mocks.go
 type (
 	service interface {
-		CheckTicketIsBooking(ctx context.Context, ticketID uuid.UUID) (bool, error)
-		GetBookingByID(ctx context.Context, id uuid.UUID) (*models.Booking, error)
-		CreateBooking(ctx context.Context, req models.CreateBookingData) (uuid.UUID, error)
+		CheckTicketIsBooking(ctx context.Context, ticketID int) (bool, error)
+		GetBookingByID(ctx context.Context, id int) (*models.Booking, error)
+		CreateBooking(ctx context.Context, req models.CreateBookingData) (int, error)
 		CreateBookingInternal(ctx context.Context, req models.Booking) error
-		DeleteBookingInternal(ctx context.Context, id uuid.UUID) error
+		DeleteBookingInternal(ctx context.Context, id int) error
 	}
 )
 
@@ -126,25 +126,31 @@ func (h *Handler) CreateBookingHandler(writer http.ResponseWriter, request *http
 }
 
 func (h *Handler) CreateBookingInternalHandler(w http.ResponseWriter, r *http.Request) {
-	ctx, span := otel.Tracer("booking-service").Start(r.Context(), "CreateBookingInternalHandler")
-	defer span.End()
 
 	var req types.CreateBookingInternalRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "invalid request", http.StatusBadRequest)
 		return
 	}
-	bokingId := uuid.MustParse(req.BookingID)
+
+	propagator := propagation.TraceContext{}
+	ctx := propagator.Extract(r.Context(), propagation.HeaderCarrier(r.Header))
+
+	tracer := otel.Tracer("saga-activities")
+	ctx, span := tracer.Start(ctx, "CreateBookingInternalHandler")
+	// log.Println("SPAN TRACE ID:", span.SpanContext().TraceID().String())
+	defer span.End()
+
+	log.Println("Booking id is :", req.BookingID)
 	booking := models.Booking{
-		ID:       bokingId,
+		ID:       req.BookingID,
 		UserID:   req.UserID,
-		TicketID: uuid.MustParse(req.TicketID),
+		TicketID: req.TicketID,
 	}
 
 	err := h.service.CreateBookingInternal(ctx, booking)
-
-	types.ProcessError(w, err, &types.CreateBookingResponse{BookingID: bokingId})
-	w.WriteHeader(http.StatusOK)
+	log.Println("Service error: ", err)
+	types.ProcessError(w, err, &types.CreateBookingResponse{BookingID: req.BookingID})
 }
 
 func (h *Handler) DeleteBookingInternalHandler(w http.ResponseWriter, r *http.Request) {
@@ -157,7 +163,7 @@ func (h *Handler) DeleteBookingInternalHandler(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	bookingID := uuid.MustParse(req.BookingID)
+	bookingID := req.BookingID
 
 	if err := h.service.DeleteBookingInternal(ctx, bookingID); err != nil {
 		http.Error(w, "failed to create booking", http.StatusInternalServerError)

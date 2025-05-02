@@ -128,13 +128,13 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "id": {
-                    "type": "string"
+                    "type": "integer"
                 },
                 "status": {
                     "$ref": "#/definitions/models.BookingStatus"
                 },
                 "ticketID": {
-                    "type": "string"
+                    "type": "integer"
                 },
                 "userID": {
                     "type": "integer"
@@ -166,13 +166,13 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "id": {
-                    "type": "string"
+                    "type": "integer"
                 },
                 "price": {
-                    "type": "number"
+                    "type": "integer"
                 },
                 "ticketID": {
-                    "type": "string"
+                    "type": "integer"
                 },
                 "userID": {
                     "type": "integer"
@@ -183,7 +183,7 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "bookingID": {
-                    "type": "string"
+                    "type": "integer"
                 }
             }
         },

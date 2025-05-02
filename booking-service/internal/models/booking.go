@@ -27,10 +27,10 @@ type Booking struct {
 }
 
 type CreateBookingData struct {
-	ID       uuid.UUID
-	UserID   int64
-	TicketID uuid.UUID
-	Price    float64
+	ID       uuid.UUID `json:"id"`
+	Price    int       `json:"price"`
+	TicketID uuid.UUID `json:"ticketID"`
+	UserID   int       `json:"userID"`
 }
 
 func MapBookingStatus(status string) BookingStatus {

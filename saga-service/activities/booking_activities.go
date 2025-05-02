@@ -6,8 +6,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"time"
+
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
 )
 
 // --------- инфраструктура ----------------------------------------------------
@@ -43,25 +47,46 @@ func (a *BookingActivities) CreateBooking(
 	ctx context.Context,
 	userID int64,
 	ticketID string,
+	traceCtx map[string]string,
 ) (string, error) {
+	propagator := propagation.TraceContext{}
+	parentCtx := propagator.Extract(context.Background(), propagation.MapCarrier(traceCtx))
+
+	tracer := otel.Tracer("saga-activities")
+	ctx, span := tracer.Start(parentCtx, "Activity.CreateBooking")
+	log.Println("SPAN TRACE ID:", span.SpanContext().TraceID().String())
+	defer span.End()
 
 	payload := struct {
 		UserID   int64  `json:"user_id"`
 		TicketID string `json:"ticket_id"`
 	}{userID, ticketID}
 
-	resBody, err := a.doPOST(ctx, a.SVC.BookingURL+"/internal/booking/create", payload)
+	raw, _ := json.Marshal(payload)
+	req, _ := http.NewRequestWithContext(ctx, http.MethodPost, a.SVC.BookingURL+"/internal/booking/create", bytes.NewReader(raw))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "super-secure-saga-token")
+
+	propagator.Inject(ctx, propagation.HeaderCarrier(req.Header))
+
+	resp, err := a.SVC.HTTPClient.Do(req)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("http request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 300 {
+		return "", fmt.Errorf("create booking failed: %d", resp.StatusCode)
 	}
 
-	var resp struct {
+	var respData struct {
 		BookingID string `json:"booking_id"`
 	}
-	if err := json.Unmarshal(resBody, &resp); err != nil {
+	if err := json.NewDecoder(resp.Body).Decode(&respData); err != nil {
 		return "", fmt.Errorf("decode booking response: %w", err)
 	}
-	return resp.BookingID, nil
+
+	return respData.BookingID, nil
 }
 
 // 2. Проверка билета в наличии

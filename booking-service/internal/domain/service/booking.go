@@ -7,6 +7,7 @@ import (
 
 	"github.com/LAshinCHE/ticket_booking_service/booking-service/internal/models"
 	"github.com/google/uuid"
+	"go.opentelemetry.io/otel"
 )
 
 type RepositoryBooking interface {
@@ -61,6 +62,9 @@ func (b *Booking) DeleteBookingInternal(ctx context.Context, bookingID uuid.UUID
 }
 
 func (b *Booking) CreateBooking(ctx context.Context, req models.CreateBookingData) (uuid.UUID, error) {
+	ctx, span := otel.Tracer("booking-service").Start(ctx, "BookingService.CreateBooking")
+	defer span.End()
+
 	req.ID = uuid.New()
 
 	if err := b.SagaClient.StartBookingSaga(ctx, req); err != nil {

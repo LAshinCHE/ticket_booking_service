@@ -126,7 +126,7 @@ func (h *Handler) CreateBookingHandler(writer http.ResponseWriter, request *http
 }
 
 func (h *Handler) CreateBookingInternalHandler(w http.ResponseWriter, r *http.Request) {
-	ctx, span := otel.Tracer("booking-service").Start(r.Context(), "CreateBookingHandler")
+	ctx, span := otel.Tracer("booking-service").Start(r.Context(), "CreateBookingInternalHandler")
 	defer span.End()
 
 	var req types.CreateBookingInternalRequest

@@ -2,6 +2,8 @@ package client
 
 import (
 	"context"
+	"fmt"
+	"log"
 	"time"
 
 	"github.com/LAshinCHE/ticket_booking_service/booking-service/internal/models"
@@ -15,34 +17,32 @@ type BookingWorkflowInput struct {
 	TraceCtx    map[string]string
 }
 
-type SagaClient struct {
+type TemporalClient struct {
 	Client client.Client
 }
 
-func NewTemporalClient() (*SagaClient, error) {
-	TemporalClient, err := client.Dial(client.Options{
+func NewTemporalClient() (*TemporalClient, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	c, err := client.DialContext(ctx, client.Options{
 		HostPort: "temporal:7233",
 	})
 	if err != nil {
-		return nil, err
+		log.Fatalf("Unable to create Temporal client: %v", err)
 	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-
-	_, err = TemporalClient.CheckHealth(ctx, &client.CheckHealthRequest{})
 	if err != nil {
 		return nil, err
 	}
-	return &SagaClient{Client: TemporalClient}, nil
+	return &TemporalClient{Client: c}, nil
 }
 
-func (s *SagaClient) StartBookingSaga(ctx context.Context, req models.CreateBookingData) error {
-	ctx, span := otel.Tracer("booking-service").Start(ctx, "StartBookingSaga")
+func (s *TemporalClient) StartBookingSaga(ctx context.Context, req models.CreateBookingData) error {
+	ctx, span := otel.Tracer("booking-service").Start(ctx, "SagaClient.StartBookingSaga")
 	defer span.End()
 	options := client.StartWorkflowOptions{
 		ID:        "booking_workflow_" + time.Now().Format("20060102150405"),
-		TaskQueue: "BOOKING_SAGA_TASK_QUEUE",
+		TaskQueue: "BOOKING_SAGA_QUEUE",
 	}
 
 	propagator := propagation.TraceContext{}
@@ -54,7 +54,21 @@ func (s *SagaClient) StartBookingSaga(ctx context.Context, req models.CreateBook
 		TraceCtx:    traceMap,
 	}
 
-	_, err := s.Client.ExecuteWorkflow(ctx, options, "BookingWorkflow", workflowInput)
-	return err
-
+	fmt.Println("start worckflow", traceMap)
+	we, err := s.Client.ExecuteWorkflow(ctx, options, "BookingWorkflow", workflowInput)
+	if err != nil {
+		log.Fatalln("Unable to execute workflow", err)
+	}
+	fmt.Println(we.GetID())
+	return nil
 }
+
+// 	var result string
+// 	err = we.Get(context.Background(), &result)
+// 	if err != nil {
+// 		log.Fatalln("Unable get workflow result", err)
+// 	}
+
+// 	log.Println("Workflow result:", result)
+// 	return err
+// }

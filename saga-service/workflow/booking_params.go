@@ -2,14 +2,14 @@ package workflow
 
 import "github.com/google/uuid"
 
-type BookingParams struct {
-	ID       uuid.UUID
-	UserID   int64
-	TicketID uuid.UUID
-	Price    float64
+type CreateBookingData struct {
+	ID       uuid.UUID `json:"id"`
+	Price    int       `json:"price"`
+	TicketID uuid.UUID `json:"ticketID"`
+	UserID   int       `json:"userID"`
 }
 
 type BookingWorkflowInput struct {
-	Params   BookingParams
-	TraceCtx map[string]string
+	BookingData CreateBookingData
+	TraceCtx    map[string]string
 }

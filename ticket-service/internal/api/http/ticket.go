@@ -8,23 +8,23 @@ import (
 
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux"
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/propagation"
 
 	_ "github.com/LAshinCHE/ticket_booking_service/ticket-service/docs"
 	"github.com/LAshinCHE/ticket_booking_service/ticket-service/internal/api/http/types"
 	"github.com/LAshinCHE/ticket_booking_service/ticket-service/internal/models"
-	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	httpSwagger "github.com/swaggo/http-swagger"
 )
 
 type service interface {
-	ReserveTicket(ctx context.Context, ticketID uuid.UUID) error
-	GetTicket(ctx context.Context, ticketID uuid.UUID) (*models.Ticket, error)
-	CheckTicket(ctx context.Context, ticketID uuid.UUID) (bool, error)
-	CreateTicket(ctx context.Context, ticketParam models.TicketModelParamRequest) (uuid.UUID, error)
-	UpdateTicketAvaible(ctx context.Context, ticketID uuid.UUID) error
+	GetTicket(ctx context.Context, ticketID int) (*models.Ticket, error)
+	CheckTicket(ctx context.Context, ticketID int) (bool, error)
+	CreateTicket(ctx context.Context, ticketParam models.TicketModelParamRequest) (int, error)
+
+	MackeAvailable(ctx context.Context, ticketID int) error
+	ReserveTickert(ctx context.Context, ticketID int) error
 }
 
 func MustRun(ctx context.Context, shutdownDur time.Duration, addr string, app service) {
@@ -41,7 +41,10 @@ func MustRun(ctx context.Context, shutdownDur time.Duration, addr string, app se
 	r.HandleFunc("/ticket/", handler.CreateTicketHandler).Methods("POST")
 	r.HandleFunc("/ticket/{ticket_id}", handler.GetTicketByIDHandler).Methods("GET")
 	r.HandleFunc("/ticket/{ticket_id}/check", handler.CheckTicketHandler).Methods("GET")
-	r.HandleFunc("/tickets/{ticket_id}", handler.UpdateTicketAvaibleHandler).Methods("PUT")
+	// r.HandleFunc("/tickets/{ticket_id}", handler.UpdateTicketAvaibleHandler).Methods("PUT")
+
+	r.HandleFunc("/ticket/{ticket_id}/reserve", handler.ReservTicketHandler).Methods("PUT")
+	r.HandleFunc("/ticket/{ticket_id}/available", handler.MakeAvailableHandler).Methods("PUT")
 
 	server := http.Server{
 		Addr:    addr,
@@ -73,6 +76,40 @@ func MustRun(ctx context.Context, shutdownDur time.Duration, addr string, app se
 // @Router / [get]
 func (h *Handler) HealthCheck(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("Hello"))
+}
+
+func (h *Handler) MakeAvailableHandler(w http.ResponseWriter, r *http.Request) {
+	propagator := propagation.TraceContext{}
+	ctx := propagator.Extract(r.Context(), propagation.HeaderCarrier(r.Header))
+
+	tracer := otel.Tracer("tikcet-service")
+	ctx, span := tracer.Start(ctx, "MakeAvailableHandler")
+	defer span.End()
+
+	ticketid, err := types.GetTicketIDRequest(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+	}
+
+	err = h.service.MackeAvailable(ctx, ticketid)
+	types.ProcessError(w, err, nil)
+}
+
+func (h *Handler) ReservTicketHandler(w http.ResponseWriter, r *http.Request) {
+	propagator := propagation.TraceContext{}
+	ctx := propagator.Extract(r.Context(), propagation.HeaderCarrier(r.Header))
+
+	tracer := otel.Tracer("tikcet-service")
+	ctx, span := tracer.Start(ctx, "ReservTicketHandler")
+	defer span.End()
+	log.Println("ReservTicketHandler")
+	ticketid, err := types.GetTicketIDRequest(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+	}
+
+	err = h.service.ReserveTickert(ctx, ticketid)
+	types.ProcessError(w, err, nil)
 }
 
 // CheckTicketHandler godoc
@@ -116,7 +153,6 @@ func (h *Handler) GetTicketByIDHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	span.SetAttributes(attribute.String("ticket.id", ticketID.String()))
 
 	ticket, err := h.service.GetTicket(ctx, ticketID)
 	if err != nil {
@@ -148,20 +184,19 @@ func (h *Handler) CreateTicketHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ticketID, err := h.service.CreateTicket(ctx, params)
-	span.SetAttributes(attribute.String("ticket.id", ticketID.String()))
 	types.ProcessError(w, err, &types.CreateTicketResponse{Id: ticketID})
 }
 
-func (h *Handler) UpdateTicketAvaibleHandler(w http.ResponseWriter, r *http.Request) {
-	params, id, err := types.UpdateTicketAvaibleRequest(r)
-	if err != nil || params.Available == false {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
+// func (h *Handler) UpdateTicketAvaibleHandler(w http.ResponseWriter, r *http.Request) {
+// 	params, id, err := types.UpdateTicketAvaibleRequest(r)
+// 	if err != nil || params.Available == false {
+// 		http.Error(w, err.Error(), http.StatusBadRequest)
+// 		return
+// 	}
 
-	err = h.service.UpdateTicketAvaible(r.Context(), id)
-	types.ProcessError(w, err, nil)
-}
+// 	err = h.service.UpdateTicketAvaible(r.Context(), id)
+// 	types.ProcessError(w, err, nil)
+// }
 
 type Handler struct {
 	service service

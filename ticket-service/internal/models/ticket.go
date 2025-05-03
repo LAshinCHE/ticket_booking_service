@@ -1,7 +1,5 @@
 package models
 
-import "github.com/google/uuid"
-
 type TicketStatus string
 
 const (
@@ -12,9 +10,9 @@ const (
 )
 
 type Ticket struct {
-	ID        uuid.UUID `json:"ticket_id"`
-	Price     float64   `json:"price"`
-	Available bool      `json:"available"`
+	ID        int     `json:"ticket_id"`
+	Price     float64 `json:"price"`
+	Available bool    `json:"available"`
 }
 
 type TicketModelParamRequest struct {

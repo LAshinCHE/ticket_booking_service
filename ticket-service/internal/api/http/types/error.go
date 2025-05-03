@@ -7,7 +7,6 @@ import (
 
 	"github.com/LAshinCHE/ticket_booking_service/ticket-service/internal/models"
 	"github.com/LAshinCHE/ticket_booking_service/ticket-service/internal/repository"
-	"github.com/google/uuid"
 )
 
 var (
@@ -19,7 +18,7 @@ type GetTicketByIDHandlerResponse struct {
 }
 
 type CreateTicketResponse struct {
-	Id uuid.UUID `json:"ticket_id"`
+	Id int `json:"ticket_id"`
 }
 
 type CheckTicketHandlerResponse struct {

@@ -136,7 +136,7 @@ func (h *Handler) CreateBookingInternalHandler(w http.ResponseWriter, r *http.Re
 	propagator := propagation.TraceContext{}
 	ctx := propagator.Extract(r.Context(), propagation.HeaderCarrier(r.Header))
 
-	tracer := otel.Tracer("saga-activities")
+	tracer := otel.Tracer("booking-service")
 	ctx, span := tracer.Start(ctx, "CreateBookingInternalHandler")
 	// log.Println("SPAN TRACE ID:", span.SpanContext().TraceID().String())
 	defer span.End()

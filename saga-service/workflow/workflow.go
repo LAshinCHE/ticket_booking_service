@@ -34,26 +34,16 @@ func BookingSagaWorkflow(ctx workflow.Context, input BookingWorkflowInput) error
 		Get(ctx, &bookingID); err != nil {
 		return err
 	}
-	// дефолтная компенсация на случай любого дальнейшего сбоя
-	defer workflow.ExecuteActivity(ctx, acts.CancelBooking, bookingID).Get(ctx, nil)
 
 	//----------------------------------------------------------------------
-	// 2. Проверяем наличие билета
-	var ok bool
-	if err := workflow.ExecuteActivity(ctx,
-		acts.CheckTicketAvailability, input.BookingData.TicketID).Get(ctx, &ok); err != nil {
-		return err
-	}
-	if !ok {
-		return workflow.NewContinueAsNewError(ctx, BookingSagaWorkflow, input) // или любая ваша ошибка
-	}
-
-	//----------------------------------------------------------------------
-	// 3. Резервируем билет
+	// 2. Резервируем билет
 	if err := workflow.ExecuteActivity(ctx,
 		acts.ReserveTicket, input.BookingData.TicketID).Get(ctx, nil); err != nil {
 		return err
 	}
+
+	// дефолтная компенсация на случай любого дальнейшего сбоя
+	defer workflow.ExecuteActivity(ctx, acts.CancelBooking, bookingID).Get(ctx, nil)
 
 	//----------------------------------------------------------------------
 	// 4. Списываем деньги

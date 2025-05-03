@@ -93,40 +93,48 @@ func (a *BookingActivities) CreateBooking(
 }
 
 // 2. Проверка билета в наличии
-func (a *BookingActivities) CheckTicketAvailability(
-	ctx context.Context,
-	ticketID int,
-) (bool, error) {
-	ticketStrID := strconv.Itoa(ticketID)
-	resBody, err := a.doGET(ctx, a.SVC.TicketURL+"/ticket/"+ticketStrID+"/check")
-	if err != nil {
-		return false, err
-	}
+// func (a *BookingActivities) CheckTicketAvailability(
+// 	ctx context.Context,
+// 	ticketID int,
+// ) (bool, error) {
+// 	ticketStrID := strconv.Itoa(ticketID)
+// 	resBody, err := a.doGET(ctx, a.SVC.TicketURL+"/ticket/"+ticketStrID+"/check")
+// 	if err != nil {
+// 		return false, err
+// 	}
 
-	var resp struct {
-		Available bool `json:"available"`
-	}
-	if err := json.Unmarshal(resBody, &resp); err != nil {
-		return false, fmt.Errorf("decode availability: %w", err)
-	}
-	return resp.Available, nil
-}
+// 	var resp struct {
+// 		Available bool `json:"available"`
+// 	}
+// 	if err := json.Unmarshal(resBody, &resp); err != nil {
+// 		return false, fmt.Errorf("decode availability: %w", err)
+// 	}
+// 	return resp.Available, nil
+// }
 
-// 3. Перевод билета в статус «забронирован»
+// 2. Перевод билета в статус «забронирован»
+// Перевод так же проверяет что билет имеет статус avaible
 func (a *BookingActivities) ReserveTicket(
 	ctx context.Context,
 	ticketID int,
 ) error {
-
-	payload := struct {
-		Status string `json:"status"`
-	}{"reserved"}
 	ticketStrId := strconv.Itoa(ticketID)
-	_, err := a.doPUT(ctx, a.SVC.TicketURL+"/tickets/"+ticketStrId, payload)
+	_, err := a.doPUT(ctx, a.SVC.TicketURL+"/ticket/"+ticketStrId+"/reserve", nil)
 	return err
 }
 
-// 4. Списать средства
+// 2. Вернуть билету статус доступен к бронированию
+// Перевод так же проверяет что билет имеет статус avaible
+func (a *BookingActivities) MakeAvailableTicket(
+	ctx context.Context,
+	ticketID int,
+) error {
+	ticketStrId := strconv.Itoa(ticketID)
+	_, err := a.doPUT(ctx, a.SVC.TicketURL+"/ticket/"+ticketStrId+"/available", nil)
+	return err
+}
+
+// 3. Списать средства
 // Сharge будет проверять что у нас хватает денег на балансе и в случае нехватки возвращать ошибку
 func (a *BookingActivities) WithdrawMoney(
 	ctx context.Context,
@@ -143,7 +151,7 @@ func (a *BookingActivities) WithdrawMoney(
 	return err
 }
 
-// 4*. Отмена операции списания средства
+// 3*. Отмена операции списания средства
 // Сharge будет проверять что у нас хватает денег на балансе и в случае нехватки возвращать ошибку
 func (a *BookingActivities) CancelWithdrawMoney(
 	ctx context.Context,
@@ -160,7 +168,7 @@ func (a *BookingActivities) CancelWithdrawMoney(
 	return err
 }
 
-// 5. Уведомить пользователя
+// 4. Уведомить пользователя
 func (a *BookingActivities) NotifyUser(
 	ctx context.Context,
 	userID int,
@@ -176,8 +184,7 @@ func (a *BookingActivities) NotifyUser(
 	return err
 }
 
-// --------- * Компенсация — отмена бронирования -------------------------------
-
+// 1* Отмена бронирования
 func (a *BookingActivities) CancelBooking(
 	ctx context.Context,
 	bookingID int,

@@ -2,20 +2,20 @@ package service
 
 import (
 	"context"
+	"crypto/rand"
 	"errors"
+	"math/big"
 
 	"github.com/LAshinCHE/ticket_booking_service/ticket-service/internal/models"
-	"github.com/google/uuid"
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
 )
 
 type RepositoryTicket interface {
-	MakeaAvailable(ctx context.Context, id uuid.UUID) error
-	GetAvailability(ctx context.Context, ticketID uuid.UUID) (bool, error)
-	GetTicket(ctx context.Context, ticketID uuid.UUID) (*models.Ticket, error)
+	MakeaAvailable(ctx context.Context, id int) error
+	GetAvailability(ctx context.Context, ticketID int) (bool, error)
+	GetTicket(ctx context.Context, ticketID int) (*models.Ticket, error)
 	CreateTicket(ctx context.Context, ticket models.Ticket) error
-	UpdateTicketAvaible(ctx context.Context, ticketID uuid.UUID) error
+	ReserveTickert(ctx context.Context, ticketID int) error
 }
 
 type Deps struct {
@@ -32,17 +32,16 @@ func NewBookingService(d Deps) *Ticket {
 	}
 }
 
-func (t *Ticket) GetTicket(ctx context.Context, ticketID uuid.UUID) (*models.Ticket, error) {
-	ctx, span := otel.Tracer("ticket-service").Start(ctx, "service.GetTicket")
+func (t *Ticket) GetTicket(ctx context.Context, ticketID int) (*models.Ticket, error) {
+	ctx, span := otel.Tracer("ticket-service").Start(ctx, "service.Ticket.GetTicket")
 	defer span.End()
-
-	span.SetAttributes(attribute.String("ticket.id", ticketID.String()))
 
 	return t.RepositoryTicket.GetTicket(ctx, ticketID)
 }
 
-func (t *Ticket) ReserveTicket(ctx context.Context, ticketID uuid.UUID) error {
-
+func (t *Ticket) ReserveTickert(ctx context.Context, ticketID int) error {
+	ctx, span := otel.Tracer("ticket-service").Start(ctx, "service.Ticket.ReserveTickert")
+	defer span.End()
 	availability, err := t.RepositoryTicket.GetAvailability(ctx, ticketID)
 	if err != nil {
 		return err
@@ -51,14 +50,16 @@ func (t *Ticket) ReserveTicket(ctx context.Context, ticketID uuid.UUID) error {
 		return errors.New("Ticket is not available, chose another ticket")
 	}
 
-	err = t.RepositoryTicket.MakeaAvailable(ctx, ticketID)
+	err = t.RepositoryTicket.ReserveTickert(ctx, ticketID)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (t *Ticket) CheckTicket(ctx context.Context, ticketID uuid.UUID) (bool, error) {
+func (t *Ticket) CheckTicket(ctx context.Context, ticketID int) (bool, error) {
+	ctx, span := otel.Tracer("ticket-service").Start(ctx, "service.Ticket.CreateTicket")
+	defer span.End()
 	availability, err := t.RepositoryTicket.GetAvailability(ctx, ticketID)
 	if err != nil {
 		return false, err
@@ -67,8 +68,15 @@ func (t *Ticket) CheckTicket(ctx context.Context, ticketID uuid.UUID) (bool, err
 	return availability, nil
 }
 
-func (t *Ticket) CreateTicket(ctx context.Context, ticketParam models.TicketModelParamRequest) (uuid.UUID, error) {
-	id := uuid.New()
+func (t *Ticket) CreateTicket(ctx context.Context, ticketParam models.TicketModelParamRequest) (int, error) {
+	ctx, span := otel.Tracer("ticket-service").Start(ctx, "service.Ticket.CreateTicket")
+	defer span.End()
+	max := big.NewInt(1000000)
+	n, err := rand.Int(rand.Reader, max)
+	if err != nil {
+		return 0, err
+	}
+	id := int(n.Int64())
 	ticket := models.Ticket{
 		ID:        id,
 		Price:     ticketParam.Price,
@@ -79,6 +87,8 @@ func (t *Ticket) CreateTicket(ctx context.Context, ticketParam models.TicketMode
 
 }
 
-func (t *Ticket) UpdateTicketAvaible(ctx context.Context, ticketID uuid.UUID) error {
-	return t.RepositoryTicket.UpdateTicketAvaible(ctx, ticketID)
+func (t *Ticket) MackeAvailable(ctx context.Context, ticketID int) error {
+	ctx, span := otel.Tracer("ticket-service").Start(ctx, "service.Ticket.MackeAvailable")
+	defer span.End()
+	return t.RepositoryTicket.MakeaAvailable(ctx, ticketID)
 }

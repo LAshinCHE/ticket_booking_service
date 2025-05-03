@@ -1,7 +1,7 @@
 -- +goose Up
 -- +goose StatementBegin
 CREATE TABLE tickets (
-    id UUID PRIMARY KEY,
+    id int PRIMARY KEY,
     price DOUBLE PRECISION NOT NULL,
     available BOOLEAN NOT NULL
 );

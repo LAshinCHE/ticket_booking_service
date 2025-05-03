@@ -7,10 +7,8 @@ import (
 	"github.com/LAshinCHE/ticket_booking_service/ticket-service/internal/models"
 	"github.com/LAshinCHE/ticket_booking_service/ticket-service/internal/repository/schemas"
 	"github.com/georgysavva/scany/v2/pgxscan"
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 
 	sq "github.com/Masterminds/squirrel"
@@ -34,7 +32,9 @@ func NewRepository(driver *pgxpool.Pool) *Repository {
 	}
 }
 
-func (r *Repository) GetAvailability(ctx context.Context, ticketID uuid.UUID) (bool, error) {
+func (r *Repository) GetAvailability(ctx context.Context, ticketID int) (bool, error) {
+	ctx, span := otel.Tracer("ticket-service").Start(ctx, "Repository.Ticket.GetAvailability")
+	defer span.End()
 	query := sq.Select(ticketColumns...).
 		From(ticketTable).
 		Where("id = $1", ticketID).PlaceholderFormat(sq.Dollar)
@@ -53,12 +53,10 @@ func (r *Repository) GetAvailability(ctx context.Context, ticketID uuid.UUID) (b
 	return ticket.Available, nil
 }
 
-func (r *Repository) GetTicket(ctx context.Context, ticketID uuid.UUID) (*models.Ticket, error) {
-	ctx, span := otel.Tracer("ticket-service").Start(ctx, "repo.GetTicket")
+func (r *Repository) GetTicket(ctx context.Context, ticketID int) (*models.Ticket, error) {
+
+	ctx, span := otel.Tracer("ticket-service").Start(ctx, "Repository.Ticket.GetTicket")
 	defer span.End()
-
-	span.SetAttributes(attribute.String("ticket.id", ticketID.String()))
-
 	query := sq.Select(ticketColumns...).
 		From(ticketTable).
 		Where("id = $1", ticketID).
@@ -82,7 +80,9 @@ func (r *Repository) GetTicket(ctx context.Context, ticketID uuid.UUID) (*models
 	return ToDomainTicket(ticket), nil
 }
 
-func (r *Repository) MakeaAvailable(ctx context.Context, ticketID uuid.UUID) error {
+func (r *Repository) MakeaAvailable(ctx context.Context, ticketID int) error {
+	ctx, span := otel.Tracer("ticket-service").Start(ctx, "Repository.Ticket.MakeaAvailable")
+	defer span.End()
 	query := sq.Update(ticketTable).
 		Set("available", true).
 		Where("id = $1", ticketID).
@@ -108,6 +108,8 @@ func (r *Repository) MakeaAvailable(ctx context.Context, ticketID uuid.UUID) err
 }
 
 func (r *Repository) CreateTicket(ctx context.Context, ticket models.Ticket) error {
+	ctx, span := otel.Tracer("ticket-service").Start(ctx, "Repository.Ticket.CreateTicket")
+	defer span.End()
 	query := sq.Insert(ticketTable).
 		Columns(ticketColumns...).
 		Values(ticket.ID, ticket.Price, ticket.Available).
@@ -125,7 +127,9 @@ func (r *Repository) CreateTicket(ctx context.Context, ticket models.Ticket) err
 	return nil
 }
 
-func (r *Repository) UpdateTicketAvaible(ctx context.Context, ticketID uuid.UUID) error {
+func (r *Repository) ReserveTickert(ctx context.Context, ticketID int) error {
+	ctx, span := otel.Tracer("ticket-service").Start(ctx, "Repository.Ticket.ReserveTickert")
+	defer span.End()
 	query := sq.Update(ticketTable).Set("available", false).Where(sq.Eq{"id": ticketID}).PlaceholderFormat(sq.Dollar)
 
 	rawQuery, args, err := query.ToSql()

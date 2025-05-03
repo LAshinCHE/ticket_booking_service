@@ -26,8 +26,7 @@ type CreateBookingInternalRequest struct {
 }
 
 type DeleteBookingInternalRequest struct {
-	BookingID int               `json:"booking_id"`
-	TraceMap  map[string]string `json:"trace_map"`
+	BookingID int `json:"booking_id"`
 }
 
 func GetBookingByID(r *http.Request) (int, error) {

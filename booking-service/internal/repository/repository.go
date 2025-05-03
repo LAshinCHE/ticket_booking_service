@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/LAshinCHE/ticket_booking_service/booking-service/internal/models"
 	"github.com/LAshinCHE/ticket_booking_service/booking-service/internal/repository/schemas"
@@ -89,13 +90,16 @@ func (r *Repository) CreateBooking(ctx context.Context, booking models.Booking) 
 }
 
 func (r *Repository) DeleteBookingByID(ctx context.Context, bookingID int) error {
+	ctx, span := otel.Tracer("booking-service").Start(ctx, "Repository.Booking.DeleteBookingInternal")
+	defer span.End()
+	log.Printf("DELETE BOOKING REPOSITORY BOOKING ID: %d \n", bookingID)
 	query := sq.Delete(bookingTable).
 		Where(sq.Eq{"id": bookingID}).
 		PlaceholderFormat(sq.Dollar)
 
 	queryString, args, err := query.ToSql()
 	if err != nil {
-		return fmt.Errorf("failed to build insert booking sql: %w", err)
+		return fmt.Errorf("failed to build delete booking sql: %w", err)
 	}
 
 	result, err := r.db.Exec(ctx, queryString, args...)
@@ -105,6 +109,7 @@ func (r *Repository) DeleteBookingByID(ctx context.Context, bookingID int) error
 
 	rowAffected := result.RowsAffected()
 	if rowAffected == 0 {
+		log.Printf("no booking found with id: %d \n", bookingID)
 		return fmt.Errorf("no booking found with id: %d", bookingID)
 	}
 

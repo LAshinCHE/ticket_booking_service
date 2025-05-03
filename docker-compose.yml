@@ -25,13 +25,14 @@ services:
     depends_on:
       - jaeger
       - temporal
-      - booking-db
-    networks:
-      - monitoring
+      - ticket-db
     environment:
+      - JAEGER_ENDPOINT=jaeger:4318
       - DB_HOST=ticket-db
       - DB_PORT=5432
-
+      - DATABASE_URL=postgresql://ticket:ticketpass@ticket-db:5432/ticketdb?sslmode=disable
+    networks:
+      - monitoring
   payment-service:
     build: ./payment-service
     ports:

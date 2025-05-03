@@ -59,6 +59,8 @@ func (b *Booking) CreateBookingInternal(ctx context.Context, booking models.Book
 }
 
 func (b *Booking) DeleteBookingInternal(ctx context.Context, bookingID int) error {
+	ctx, span := otel.Tracer("booking-service").Start(ctx, "BookingService.DeleteBookingInternal")
+	defer span.End()
 	return b.RepositoryBooking.DeleteBookingByID(ctx, bookingID)
 }
 

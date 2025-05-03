@@ -10,6 +10,7 @@ import (
 	"github.com/LAshinCHE/ticket_booking_service/ticket-service/cmd/internal"
 	"github.com/LAshinCHE/ticket_booking_service/ticket-service/internal/repository"
 	"github.com/LAshinCHE/ticket_booking_service/ticket-service/internal/service"
+	"github.com/LAshinCHE/ticket_booking_service/ticket-service/internal/tracer"
 
 	internalhttp "github.com/LAshinCHE/ticket_booking_service/ticket-service/internal/api/http"
 )
@@ -39,6 +40,7 @@ func main() {
 
 	defer db.Close()
 
+	tracer.MustSetup(ctx, "ticket-service")
 	repositoryTicket := repository.NewRepository(db)
 
 	app := service.NewBookingService(service.Deps{

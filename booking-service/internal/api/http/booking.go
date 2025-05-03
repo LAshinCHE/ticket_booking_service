@@ -138,7 +138,6 @@ func (h *Handler) CreateBookingInternalHandler(w http.ResponseWriter, r *http.Re
 
 	tracer := otel.Tracer("booking-service")
 	ctx, span := tracer.Start(ctx, "CreateBookingInternalHandler")
-	// log.Println("SPAN TRACE ID:", span.SpanContext().TraceID().String())
 	defer span.End()
 
 	log.Println("Booking id is :", req.BookingID)
@@ -154,22 +153,27 @@ func (h *Handler) CreateBookingInternalHandler(w http.ResponseWriter, r *http.Re
 }
 
 func (h *Handler) DeleteBookingInternalHandler(w http.ResponseWriter, r *http.Request) {
-	ctx, span := otel.Tracer("booking-service").Start(r.Context(), "DeleteBookingInternalHandler")
+	var err error
+	defer log.Printf("BOOKING SERVICE: DELETE_BOOKING err %s \n", err)
+	propagator := propagation.TraceContext{}
+	ctx := propagator.Extract(r.Context(), propagation.HeaderCarrier(r.Header))
+
+	tracer := otel.Tracer("booking-service")
+	ctx, span := tracer.Start(ctx, "DeleteBookingInternalHandler")
 	defer span.End()
 
 	var req types.DeleteBookingInternalRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err = json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "invalid request", http.StatusBadRequest)
 		return
 	}
 
 	bookingID := req.BookingID
 
-	if err := h.service.DeleteBookingInternal(ctx, bookingID); err != nil {
+	if err = h.service.DeleteBookingInternal(ctx, bookingID); err != nil {
 		http.Error(w, "failed to create booking", http.StatusInternalServerError)
 		return
 	}
-
 	w.WriteHeader(http.StatusOK)
 }
 

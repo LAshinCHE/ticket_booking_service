@@ -6,11 +6,9 @@ import (
 	"math/rand"
 	"os"
 	"time"
-
-	"github.com/google/uuid"
 )
 
-var ticketIDs []uuid.UUID
+var ticketIDs []int
 
 func main() {
 	rand.Seed(time.Now().UnixNano())
@@ -27,11 +25,11 @@ func main() {
 	defer fileIds.Close()
 
 	for i := 0; i <= 300; i++ {
-		id := uuid.New()
+		id := i
 		price := rand.Float64()*400 + 100
 		available := rand.Intn(2) == 0
 
-		fmt.Fprintf(fileTicket, "INSERT INTO tickets (id, price, available) VALUES ('%s', %.2f, %t);\n", id, price, available)
+		fmt.Fprintf(fileTicket, "INSERT INTO tickets (id, price, available) VALUES ('%d', %.2f, %t);\n", id, price, available)
 		ticketIDs = append(ticketIDs, id)
 	}
 
@@ -39,7 +37,7 @@ func main() {
 	saveIDs(ticketIDs, "ticket_ids.json")
 }
 
-func saveIDs(ids []uuid.UUID, name string) {
+func saveIDs(ids []int, name string) {
 	file, err := os.Create(name)
 	if err != nil {
 		panic(err)

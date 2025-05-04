@@ -28,25 +28,44 @@ func BookingSagaWorkflow(ctx workflow.Context, input BookingWorkflowInput) error
 			MaximumAttempts: 3,
 		},
 	})
-
+	var err error
 	// Нужен указатель, чтобы Temporal нашёл методы
 	var acts *activities.BookingActivities
 	var createBookingResult activities.CreateBookingResulet
 	var updatedTraceCtx map[string]string
 
+	// Компенсация на случай дальнейших сбоев
+	defer func() {
+		if err != nil {
+			workflow.ExecuteActivity(ctx,
+				acts.CancelBooking,
+				input.BookingData.ID,
+				updatedTraceCtx,
+			).Get(ctx, nil)
+		}
+	}()
+
 	//----------------------------------------------------------------------
 	// 1. Создаём бронирование
-
-	if err := workflow.ExecuteActivity(ctx,
+	if err = workflow.ExecuteActivity(ctx,
 		acts.CreateBooking, input.BookingData.ID, input.BookingData.UserID, input.BookingData.TicketID, input.BookingData.Price, input.TraceCtx).
 		Get(ctx, &createBookingResult); err != nil {
 		return err
 	}
 	updatedTraceCtx = createBookingResult.TraceCtx
 
+	defer func() {
+		if err != nil {
+			workflow.ExecuteActivity(ctx,
+				acts.MakeAvailableTicket,
+				input.BookingData.TicketID,
+				updatedTraceCtx).Get(ctx, nil)
+		}
+	}()
+
 	//----------------------------------------------------------------------
 	// 2. Резервируем билет
-	if err := workflow.ExecuteActivity(ctx,
+	if err = workflow.ExecuteActivity(ctx,
 		acts.ReserveTicket,
 		input.BookingData.TicketID,
 		updatedTraceCtx,
@@ -54,24 +73,35 @@ func BookingSagaWorkflow(ctx workflow.Context, input BookingWorkflowInput) error
 		return err
 	}
 
-	// Компенсация на случай дальнейших сбоев
-	defer workflow.ExecuteActivity(ctx,
-		acts.CancelBooking,
-		createBookingResult.ID,
-		updatedTraceCtx,
-	).Get(ctx, nil)
-
+	defer func() {
+		if err != nil {
+			workflow.ExecuteActivity(ctx,
+				acts.CancelWithdrawMoney,
+				input.BookingData.UserID,
+				input.BookingData.Price,
+				updatedTraceCtx).Get(ctx, nil)
+		}
+	}()
 	//----------------------------------------------------------------------
 	// 4. Списываем деньги
-	if err := workflow.ExecuteActivity(ctx,
-		acts.WithdrawMoney, input.BookingData.UserID, input.BookingData.Price, createBookingResult.ID, updatedTraceCtx).Get(ctx, nil); err != nil {
+	if err = workflow.ExecuteActivity(ctx,
+		acts.WithdrawMoney,
+		input.BookingData.UserID,
+		input.BookingData.Price,
+		updatedTraceCtx).Get(ctx, nil); err != nil {
 		return err
 	}
-	defer workflow.ExecuteActivity(ctx, acts.CancelWithdrawMoney, input.BookingData.UserID, input.BookingData.Price).Get(ctx, nil) // возвращаем деньги в случае ошибки
 
 	// 5. Уведомляем пользователя (не критично, поэтому без проверки Get)
-	_ = workflow.ExecuteActivity(ctx,
-		acts.NotifyUser, input.BookingData.UserID, "Бронирование успешно").Get(ctx, nil)
+	err = workflow.ExecuteActivity(ctx,
+		acts.NotifyUser,
+		input.BookingData.UserID,
+		"Бронирование успешно",
+		updatedTraceCtx).Get(ctx, nil)
+
+	if err != nil {
+		logger.Warn("Failed to notify user", "err", err)
+	}
 
 	logger.Info("Saga finished OK", "BookingID", createBookingResult.ID)
 	return nil

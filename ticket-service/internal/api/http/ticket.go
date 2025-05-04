@@ -96,18 +96,18 @@ func (h *Handler) MakeAvailableHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) ReservTicketHandler(w http.ResponseWriter, r *http.Request) {
+	var err error
 	propagator := propagation.TraceContext{}
 	ctx := propagator.Extract(r.Context(), propagation.HeaderCarrier(r.Header))
 
 	tracer := otel.Tracer("tikcet-service")
 	ctx, span := tracer.Start(ctx, "ReservTicketHandler")
 	defer span.End()
-	log.Println("ReservTicketHandler")
 	ticketid, err := types.GetTicketIDRequest(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	}
-
+	defer log.Printf("ReservTicketHandler Ticket with id: %d, END with err %e", ticketid, err)
 	err = h.service.ReserveTickert(ctx, ticketid)
 	types.ProcessError(w, err, nil)
 }

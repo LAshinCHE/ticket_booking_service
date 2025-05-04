@@ -9,6 +9,8 @@ import (
 
 	"github.com/LAshinCHE/ticket_booking_service/notification-service/internal/models"
 	"github.com/gorilla/mux"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
 )
 
 type NotificationService interface {
@@ -45,6 +47,12 @@ func MustRun(ctx context.Context, addr string, app NotificationService, shutdowm
 }
 
 func (h *Handler) Notify(w http.ResponseWriter, r *http.Request) {
+	propagator := propagation.TraceContext{}
+	ctx := propagator.Extract(r.Context(), propagation.HeaderCarrier(r.Header))
+
+	tracer := otel.Tracer("notification-service")
+	ctx, span := tracer.Start(ctx, "Notify")
+	defer span.End()
 	message := r.URL.Query().Get("message")
 	if message == "" {
 		http.Error(w, "missing message", http.StatusBadRequest)

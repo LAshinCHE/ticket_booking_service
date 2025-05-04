@@ -154,10 +154,26 @@ func (a *BookingActivities) ReserveTicket(
 func (a *BookingActivities) MakeAvailableTicket(
 	ctx context.Context,
 	ticketID int,
+	traceCtx map[string]string,
 ) error {
+	propagator := propagation.TraceContext{}
+	parentCtx := propagator.Extract(context.Background(), propagation.MapCarrier(traceCtx))
+
+	tracer := otel.Tracer("saga-activities")
+	ctx, span := tracer.Start(parentCtx, "Activity.MakeAvailableTicket")
+	defer span.End()
+
 	ticketStrId := strconv.Itoa(ticketID)
-	_, err := a.doPUT(ctx, a.SVC.TicketURL+"/ticket/"+ticketStrId+"/available", nil)
-	return err
+	req, _ := http.NewRequestWithContext(ctx, http.MethodPost, a.SVC.TicketURL+"/ticket/"+ticketStrId+"/available", nil)
+	propagator.Inject(ctx, propagation.HeaderCarrier(req.Header))
+
+	resp, err := a.SVC.HTTPClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("http request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	return nil
 }
 
 // 3. Списать средства
@@ -181,7 +197,7 @@ func (a *BookingActivities) WithdrawMoney(
 	}{userID, amount}
 
 	raw, _ := json.Marshal(payload)
-	req, _ := http.NewRequestWithContext(ctx, http.MethodPost, a.SVC.BookingURL+"/payments/charge", bytes.NewReader(raw))
+	req, _ := http.NewRequestWithContext(ctx, http.MethodPost, a.SVC.TicketURL+"/payments/charge", bytes.NewReader(raw))
 	req.Header.Set("Content-Type", "application/json")
 	propagator.Inject(ctx, propagation.HeaderCarrier(req.Header))
 
@@ -201,14 +217,30 @@ func (a *BookingActivities) CancelWithdrawMoney(
 	ctx context.Context,
 	userID int,
 	amount float64,
+	traceCtx map[string]string,
 ) error {
+	propagator := propagation.TraceContext{}
+	parentCtx := propagator.Extract(context.Background(), propagation.MapCarrier(traceCtx))
+
+	tracer := otel.Tracer("saga-activities")
+	ctx, span := tracer.Start(parentCtx, "Activity.ReserveTicket")
+	defer span.End()
 
 	payload := struct {
 		UserID int     `json:"user_id"`
 		Amount float64 `json:"amount"`
 	}{userID, amount}
 
-	_, err := a.doPOST(ctx, a.SVC.PaymentURL+"/payments/refund", payload)
+	raw, _ := json.Marshal(payload)
+	req, _ := http.NewRequestWithContext(ctx, http.MethodPost, a.SVC.TicketURL+"/payments/refund", bytes.NewReader(raw))
+	req.Header.Set("Content-Type", "application/json")
+	propagator.Inject(ctx, propagation.HeaderCarrier(req.Header))
+
+	resp, err := a.SVC.HTTPClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("http request: %w", err)
+	}
+	defer resp.Body.Close()
 	return err
 }
 
@@ -217,12 +249,24 @@ func (a *BookingActivities) NotifyUser(
 	ctx context.Context,
 	userID int,
 	message string,
+	traceCtx map[string]string,
 ) error {
+	propagator := propagation.TraceContext{}
+	parentCtx := propagator.Extract(context.Background(), propagation.MapCarrier(traceCtx))
+
+	tracer := otel.Tracer("saga-activities")
+	ctx, span := tracer.Start(parentCtx, "Activity.ReserveTicket")
+	defer span.End()
 
 	payload := struct {
 		UserID  int    `json:"user_id"`
 		Message string `json:"message"`
 	}{userID, message}
+
+	raw, _ := json.Marshal(payload)
+	req, _ := http.NewRequestWithContext(ctx, http.MethodPost, a.SVC.NotifyURL+"/notifications", bytes.NewReader(raw))
+	req.Header.Set("Content-Type", "application/json")
+	propagator.Inject(ctx, propagation.HeaderCarrier(req.Header))
 
 	_, err := a.doPOST(ctx, a.SVC.NotifyURL+"/notifications", payload)
 	return err
@@ -241,7 +285,7 @@ func (a *BookingActivities) CancelBooking(
 	ctx, span := tracer.Start(parentCtx, "Activity.CancelBooking")
 	log.Println("SPAN TRACE ID:", span.SpanContext().TraceID().String())
 	defer span.End()
-
+	log.Println("SAGA SERVICE Deleting booking id: ", bookingID)
 	payload := struct {
 		BookingID int `json:"booking_id"`
 	}{bookingID}

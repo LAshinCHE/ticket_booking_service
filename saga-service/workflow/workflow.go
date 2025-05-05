@@ -93,15 +93,11 @@ func BookingSagaWorkflow(ctx workflow.Context, input BookingWorkflowInput) error
 	}
 
 	// 5. Уведомляем пользователя (не критично, поэтому без проверки Get)
-	err = workflow.ExecuteActivity(ctx,
+	_ = workflow.ExecuteActivity(ctx,
 		acts.NotifyUser,
 		input.BookingData.UserID,
 		"Бронирование успешно",
 		updatedTraceCtx).Get(ctx, nil)
-
-	if err != nil {
-		logger.Warn("Failed to notify user", "err", err)
-	}
 
 	logger.Info("Saga finished OK", "BookingID", createBookingResult.ID)
 	return nil

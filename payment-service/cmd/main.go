@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"log"
-	"os"
 	"os/signal"
 	"syscall"
 	"time"
@@ -12,6 +11,7 @@ import (
 	myhttp "github.com/LAshinCHE/ticket_booking_service/payment-service/internal/api/http"
 	"github.com/LAshinCHE/ticket_booking_service/payment-service/internal/repository"
 	"github.com/LAshinCHE/ticket_booking_service/payment-service/internal/service"
+	"github.com/LAshinCHE/ticket_booking_service/payment-service/internal/tracer"
 )
 
 var (
@@ -27,11 +27,13 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	repository := repository.NewReopository(db)
 
+	tracer.MustSetup(ctx, "payment-service")
+
+	repository := repository.NewReopository(db)
 	service := service.NewPaymentService(service.Deps{
 		PaymentRepository: repository,
 	})
 
-	myhttp.MustRun(ctx, service, os.Getenv("PORT"), shutdownDuration)
+	myhttp.MustRun(ctx, service, ":8083", shutdownDuration)
 }

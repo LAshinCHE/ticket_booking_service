@@ -14,6 +14,7 @@ type RepositoryBooking interface {
 	CheckTicketIsBooked(ctx context.Context, ticketID int) (bool, error)
 	CreateBooking(ctx context.Context, booking models.Booking) error
 	DeleteBookingByID(ctx context.Context, bookingID int) error
+	BookingChangeStatus(ctx context.Context, bookingID int, status models.BookingStatus) error
 }
 
 type SagaClient interface {
@@ -69,7 +70,12 @@ func (b *Booking) CreateBooking(ctx context.Context, req models.CreateBookingDat
 	defer span.End()
 
 	if err := b.SagaClient.StartBookingSaga(ctx, req); err != nil {
-		log.Printf("failed to start booking saga: %v", err)
+		log.Printf("failed to start booking saga: %v \n", err)
+		return 0, err
+	}
+
+	if err := b.RepositoryBooking.BookingChangeStatus(ctx, req.ID, models.BookingStatusReserved); err != nil {
+		log.Printf("failed to change booking status: %v \n", err)
 		return 0, err
 	}
 

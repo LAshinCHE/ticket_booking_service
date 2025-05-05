@@ -188,7 +188,7 @@ func (a *BookingActivities) WithdrawMoney(
 	parentCtx := propagator.Extract(context.Background(), propagation.MapCarrier(traceCtx))
 
 	tracer := otel.Tracer("saga-activities")
-	ctx, span := tracer.Start(parentCtx, "Activity.ReserveTicket")
+	ctx, span := tracer.Start(parentCtx, "Activity.WithdrawMoney")
 	defer span.End()
 
 	payload := struct {
@@ -197,7 +197,7 @@ func (a *BookingActivities) WithdrawMoney(
 	}{userID, amount}
 
 	raw, _ := json.Marshal(payload)
-	req, _ := http.NewRequestWithContext(ctx, http.MethodPost, a.SVC.TicketURL+"/payments/charge", bytes.NewReader(raw))
+	req, _ := http.NewRequestWithContext(ctx, http.MethodPost, a.SVC.PaymentURL+"/payments/charge", bytes.NewReader(raw))
 	req.Header.Set("Content-Type", "application/json")
 	propagator.Inject(ctx, propagation.HeaderCarrier(req.Header))
 
@@ -223,7 +223,7 @@ func (a *BookingActivities) CancelWithdrawMoney(
 	parentCtx := propagator.Extract(context.Background(), propagation.MapCarrier(traceCtx))
 
 	tracer := otel.Tracer("saga-activities")
-	ctx, span := tracer.Start(parentCtx, "Activity.ReserveTicket")
+	ctx, span := tracer.Start(parentCtx, "Activity.CancelWithdrawMoney")
 	defer span.End()
 
 	payload := struct {
@@ -232,7 +232,7 @@ func (a *BookingActivities) CancelWithdrawMoney(
 	}{userID, amount}
 
 	raw, _ := json.Marshal(payload)
-	req, _ := http.NewRequestWithContext(ctx, http.MethodPost, a.SVC.TicketURL+"/payments/refund", bytes.NewReader(raw))
+	req, _ := http.NewRequestWithContext(ctx, http.MethodPost, a.SVC.PaymentURL+"/payments/refund", bytes.NewReader(raw))
 	req.Header.Set("Content-Type", "application/json")
 	propagator.Inject(ctx, propagation.HeaderCarrier(req.Header))
 
@@ -255,7 +255,7 @@ func (a *BookingActivities) NotifyUser(
 	parentCtx := propagator.Extract(context.Background(), propagation.MapCarrier(traceCtx))
 
 	tracer := otel.Tracer("saga-activities")
-	ctx, span := tracer.Start(parentCtx, "Activity.ReserveTicket")
+	ctx, span := tracer.Start(parentCtx, "Activity.NotifyUser")
 	defer span.End()
 
 	payload := struct {
@@ -264,11 +264,15 @@ func (a *BookingActivities) NotifyUser(
 	}{userID, message}
 
 	raw, _ := json.Marshal(payload)
-	req, _ := http.NewRequestWithContext(ctx, http.MethodPost, a.SVC.NotifyURL+"/notifications", bytes.NewReader(raw))
+	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, a.SVC.NotifyURL+"/notify", bytes.NewReader(raw))
 	req.Header.Set("Content-Type", "application/json")
 	propagator.Inject(ctx, propagation.HeaderCarrier(req.Header))
 
-	_, err := a.doPOST(ctx, a.SVC.NotifyURL+"/notifications", payload)
+	resp, err := a.SVC.HTTPClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("http request: %w", err)
+	}
+	defer resp.Body.Close()
 	return err
 }
 

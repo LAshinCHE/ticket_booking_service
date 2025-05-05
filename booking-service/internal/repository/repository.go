@@ -116,6 +116,34 @@ func (r *Repository) DeleteBookingByID(ctx context.Context, bookingID int) error
 	return nil
 }
 
+func (r *Repository) BookingChangeStatus(ctx context.Context, bookingID int, status models.BookingStatus) error {
+	ctx, span := otel.Tracer("booking-service").Start(ctx, "Repository.Booking.BookingChangeStatus")
+	defer span.End()
+
+	query := sq.Update(bookingTable).
+		Set("status", status).
+		Where(sq.Eq{"id": bookingID}).
+		PlaceholderFormat(sq.Dollar)
+
+	queryString, args, err := query.ToSql()
+	if err != nil {
+		return fmt.Errorf("Faild to generate sql query: %w", err)
+	}
+
+	result, err := r.db.Exec(ctx, queryString, args...)
+	if err != nil {
+		return fmt.Errorf("failed to execute booking change status: %w", err)
+	}
+
+	rowAffected := result.RowsAffected()
+	if rowAffected == 0 {
+		log.Printf("no booking found with id: %d \n", bookingID)
+		return fmt.Errorf("no booking found with id: %d", bookingID)
+	}
+
+	return nil
+}
+
 func ToDomainBooking(booking schemas.Booking) *models.Booking {
 
 	return &models.Booking{

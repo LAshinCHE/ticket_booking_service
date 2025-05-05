@@ -59,7 +59,15 @@ func (s *TemporalClient) StartBookingSaga(ctx context.Context, req models.Create
 	if err != nil {
 		log.Fatalln("Unable to execute workflow", err)
 	}
-	fmt.Println(we.GetID())
+
+	err = we.Get(ctx, nil)
+	if err != nil {
+		log.Println("Workflow execution failed:", err)
+		return err
+	}
+
+	fmt.Println("Workflow completed successfully")
+
 	return nil
 }
 

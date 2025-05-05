@@ -40,14 +40,14 @@ services:
     depends_on:
       - jaeger
       - payment-db
-    networks:
-      - monitoring
     environment:
       - DB_HOST=payment-db
       - DB_PORT=5432
       - DATABASE_URL=postgresql://payment:paymentpass@payment-db:5432/paymentdb?sslmode=disable
       - JAEGER_ENDPOINT=jaeger:4318
-
+    networks:
+      - monitoring
+  
   notification-service:
     build: ./notification-service
     depends_on:

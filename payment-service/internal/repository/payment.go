@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"go.opentelemetry.io/otel"
 )
 
 type Repository struct {
@@ -21,6 +22,8 @@ func NewReopository(db *pgxpool.Pool) *Repository {
 var ErrInsufficientFunds = errors.New("insufficient funds")
 
 func (r *Repository) DebitUserBalance(ctx context.Context, userID int64, amount float64) error {
+	ctx, span := otel.Tracer("payment-service").Start(ctx, "Repository.Payment.DebitUserBalance")
+	defer span.End()
 	tx, err := r.db.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("start tx: %w", err)
@@ -61,6 +64,8 @@ func (r *Repository) DebitUserBalance(ctx context.Context, userID int64, amount 
 }
 
 func (r *Repository) CreditUserBalance(ctx context.Context, userID int64, amount float64) error {
+	ctx, span := otel.Tracer("payment-service").Start(ctx, "Repository.Payment.CreditUserBalance")
+	defer span.End()
 	tx, err := r.db.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("start tx: %w", err)

@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
 )
 
 type service interface {
@@ -23,7 +25,7 @@ func MustRun(ctx context.Context, app service, addr string, shutdownDur time.Dur
 	}
 
 	r := mux.NewRouter()
-	r.HandleFunc("/health-check/", h.HealthCheck).Methods("GET")
+	r.HandleFunc("/", h.HealthCheck).Methods("GET")
 	r.HandleFunc("/payments/charge", h.DebitFromBalance).Methods("POST")
 	r.HandleFunc("/payments/refund", h.RefundToBalance).Methods("POST")
 	// r.HandleFunc("/payments/{user_id}/balance/", h.GetBalance).Methods("GET")
@@ -51,40 +53,52 @@ func MustRun(ctx context.Context, app service, addr string, shutdownDur time.Dur
 }
 
 func (h *Handler) HealthCheck(w http.ResponseWriter, r *http.Request) {
+	_, span := otel.Tracer("payment-service").Start(r.Context(), "HealthCheck")
+	defer span.End()
 	w.Write([]byte("hello"))
 }
 
 // Debit также проверяет хватает ли средств на счету
 func (h *Handler) DebitFromBalance(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	userIDStr := vars["userID"]
-	userID, err := strconv.ParseInt(userIDStr, 10, 64)
-	if err != nil {
-		http.Error(w, "invalid userID", http.StatusBadRequest)
+	start := time.Now()
+	logPrefix := "[DebitFromBalance]"
+
+	propagator := propagation.TraceContext{}
+	ctx := propagator.Extract(r.Context(), propagation.HeaderCarrier(r.Header))
+	tracer := otel.Tracer("payment-service")
+	ctx, span := tracer.Start(ctx, "DebitFromBalanceHandler")
+	defer span.End()
+
+	type debitRequest struct {
+		UserID int64   `json:"user_id"`
+		Amount float64 `json:"amount"`
+	}
+
+	var reqData debitRequest
+	if err := json.NewDecoder(r.Body).Decode(&reqData); err != nil {
+		log.Printf("%s ошибка при чтении тела запроса: %v", logPrefix, err)
+		http.Error(w, "неверный формат запроса", http.StatusBadRequest)
 		return
 	}
 
-	amountStr := r.URL.Query().Get("amount")
-	if amountStr == "" {
-		http.Error(w, "missing amount", http.StatusBadRequest)
-		return
-	}
+	userID := reqData.UserID
+	amount := reqData.Amount
 
-	amount, err := strconv.ParseFloat(amountStr, 64)
-	if err != nil {
-		http.Error(w, "invalid amount", http.StatusBadRequest)
-		return
-	}
+	log.Printf("%s userID=%d amount=%.2f", logPrefix, userID, amount)
 
-	enough, err := h.service.DebitBalance(r.Context(), userID, amount)
+	enough, err := h.service.DebitBalance(ctx, userID, amount)
 	if err != nil {
+		log.Printf("%s service error: %v", logPrefix, err)
 		if err.Error() == "insufficient funds" {
 			http.Error(w, "not enough funds", http.StatusConflict)
-			return
+		} else {
+			http.Error(w, "internal error", http.StatusInternalServerError)
 		}
-		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
+
+	log.Printf("%s success: userID=%d amount=%.2f enough=%v duration=%s",
+		logPrefix, userID, amount, enough, time.Since(start))
 
 	resp := struct {
 		Enough bool `json:"enough"`
@@ -93,15 +107,22 @@ func (h *Handler) DebitFromBalance(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(resp)
 }
 
 func (h *Handler) RefundToBalance(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	userIDStr := vars["userID"]
+	logPrefix := "[DebitFromBalance]"
+	propagator := propagation.TraceContext{}
+	ctx := propagator.Extract(r.Context(), propagation.HeaderCarrier(r.Header))
+
+	tracer := otel.Tracer("payment-service")
+	ctx, span := tracer.Start(ctx, "RefundToBalanceHandler")
+	defer span.End()
+
+	userIDStr := r.URL.Query().Get("user_id")
 	userID, err := strconv.ParseInt(userIDStr, 10, 64)
 	if err != nil {
+		log.Printf("%s invalid user_id: %v", logPrefix, err)
 		http.Error(w, "invalid userID", http.StatusBadRequest)
 		return
 	}

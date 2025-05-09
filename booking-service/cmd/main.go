@@ -42,6 +42,7 @@ func main() {
 
 	tracer.MustSetup(ctx, "booking-service")
 	metrics.InitMetrics()
+	//metrics.StartMetricsEndpoint()
 
 	repoBooking := repository.NewRepository(db)
 

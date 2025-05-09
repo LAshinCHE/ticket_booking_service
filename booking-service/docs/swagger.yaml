@@ -39,9 +39,23 @@ definitions:
       userID:
         type: integer
     type: object
+  types.CreateBookingInternalRequest:
+    properties:
+      booking_id:
+        type: integer
+      ticket_id:
+        type: integer
+      user_id:
+        type: integer
+    type: object
   types.CreateBookingResponse:
     properties:
       bookingID:
+        type: integer
+    type: object
+  types.DeleteBookingInternalRequest:
+    properties:
+      booking_id:
         type: integer
     type: object
   types.GetBookingByIDHandlerResponse:
@@ -126,4 +140,68 @@ paths:
       summary: Получить бронь по ID
       tags:
       - booking
+  /internal/booking/create:
+    post:
+      consumes:
+      - application/json
+      description: Создание бронирования внутренним сервисом
+      parameters:
+      - description: Данные для создания брони
+        in: body
+        name: booking
+        required: true
+        schema:
+          $ref: '#/definitions/types.CreateBookingInternalRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.CreateBookingResponse'
+        "400":
+          description: invalid request
+          schema:
+            type: string
+        "500":
+          description: internal server error
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: Внутреннее создание бронирования
+      tags:
+      - internal
+  /internal/booking/delete:
+    delete:
+      consumes:
+      - application/json
+      description: Удаление бронирования внутренним сервисом
+      parameters:
+      - description: Данные для удаления брони
+        in: body
+        name: booking
+        required: true
+        schema:
+          $ref: '#/definitions/types.DeleteBookingInternalRequest'
+      produces:
+      - text/plain
+      responses:
+        "200":
+          description: ok
+          schema:
+            type: string
+        "400":
+          description: invalid request
+          schema:
+            type: string
+        "500":
+          description: failed to create booking
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: Внутреннее удаление бронирования
+      tags:
+      - internal
 swagger: "2.0"

@@ -44,7 +44,7 @@ func (r *Repository) GetBookingByID(ctx context.Context, bookingID int) (*models
 
 	var booking schemas.Booking
 
-	if err := pgxscan.Select(ctx, r.db, &booking, rawQuery, args...); err != nil {
+	if err := pgxscan.Get(ctx, r.db, &booking, rawQuery, args...); err != nil {
 		return nil, err
 	}
 

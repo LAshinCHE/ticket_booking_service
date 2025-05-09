@@ -7,10 +7,12 @@ services:
       - "8081:8081"
     depends_on:
       - jaeger
+      - otel-collector
       - temporal
       - booking-db
     environment:
-      - JAEGER_ENDPOINT=jaeger:4318
+      - OTEL_EXPORTER_OTLP_ENDPOINT=otel-collector:4317
+      - JAEGER_ENDPOINT=jaeger:14250
       - TEMPORAL_ADDRESS=temporal:7233
       - DB_HOST=booking-db
       - DB_PORT=5432
@@ -106,6 +108,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+      
 
   payment-db:
     image: postgres:14
@@ -124,77 +127,66 @@ services:
       timeout: 5s
       retries: 5
 
-  prometheus:
-    image: prom/prometheus:latest
-    container_name: prometheus
-    ports:
-      - "9090:9090"
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    container_name: otel-collector
+    command: ["--config=/etc/otelcol/config.yaml"]
     volumes:
-      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-    networks:
-      - monitoring
-
-  grafana:
-    image: grafana/grafana:latest
-    container_name: grafana
+      - ./config/otelcol/otel-collector-config.yaml:/etc/otelcol/config.yaml
     ports:
-      - "3000:3000"
-    environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin
-    depends_on:
-      - prometheus
+      - "4317:4317"  # OTLP gRPC
+      - "4318:4318"  # OTLP HTTP
+      - "9464:9464"  # Prometheus metrics (опционально)
     networks:
       - monitoring
 
   jaeger:
     image: jaegertracing/all-in-one:latest
     container_name: jaeger
+    restart: unless-stopped
     ports:
-      - "16686:16686"  
-      - "4318:4318" 
+      - "16686:16686"  # только UI
     networks:
       - monitoring
-    
 
-  tempo:
-    image: grafana/tempo:latest
-    container_name: tempo
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
     ports:
-      - "3200:3200"
-      - "4317:4317"   # OTLP gRPC 
+      - "9090:9090"
     volumes:
-      - ./tempo/tempo.yaml:/etc/tempo.yaml
-    command: ["--config.file=/etc/tempo.yaml"]
+      - ./config/prometheus/prometheus.yaml:/etc/prometheus/prometheus.yaml
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yaml"
     networks:
       - monitoring
-  # postgres-exporter-booking:
-  #   image: prometheuscommunity/postgres-exporter
-  #   environment:
-  #     DATA_SOURCE_NAME: "postgresql://booking:bookingpass@bookingdb:5432/bookingdb?sslmode=disable"
+  
+  # loki:
+  #   image: grafana/loki:2.9.0
   #   ports:
-  #     - "9187:9187"
-  #   networks:
-  #     - monitoring
+  #     - "3100:3100"
+  #   command: -config.file=/etc/loki/local-config.yaml
+  #   volumes:
+  #     - ./config/loki/loki-config.yaml:/etc/loki/local-config.yaml
+  # promtail:
+  #   image: grafana/promtail:2.9.0
+  #   volumes:
+  #     - /var/log:/var/log
+  #     - ./config/loki/promtail-config.yaml:/etc/promtail/config.yaml
+  #   command: -config.file=/etc/promtail/config.yaml
 
-  # postgres-exporter-ticket:
-  #   image: prometheuscommunity/postgres-exporter
-  #   environment:
-  #     DATA_SOURCE_NAME: "postgresql://ticket:ticketpass@ticketdb:5432/ticketdb?sslmode=disable"
-  #   ports:
-  #     - "9188:9188"
-  #   networks:
-  #     - monitoring
-  
-  # postgres-exporter-payment:
-  #   image: prometheuscommunity/postgres-exporter
-  #   environment:
-  #     DATA_SOURCE_NAME: "postgresql://payment:paymentpass@paymentdb:5432/paymentdb?sslmode=disable"
-  #   ports:
-  #     - "9189:9189"
-  #   networks:
-  #     - monitoring
-  
-  
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    networks:
+      - monitoring
+    volumes:
+      - grafana_data:/var/lib/grafana
+    # depends_on:
+    #   - loki
   temporal:
       image: temporalio/auto-setup:1.22
       ports:
@@ -232,10 +224,14 @@ services:
       - TEMPORAL_GRPC_ENDPOINT=temporal:7233
     depends_on:
       - temporal
+    networks:
+      - monitoring
 
 networks:
   monitoring:
     driver: bridge
 
 volumes:
-    temporal_pgdata:
+  grafana_data:
+  prometheus_data:
+  temporal_pgdata:

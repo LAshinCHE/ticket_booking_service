@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -119,27 +118,24 @@ func (h *Handler) RefundToBalance(w http.ResponseWriter, r *http.Request) {
 	ctx, span := tracer.Start(ctx, "RefundToBalanceHandler")
 	defer span.End()
 
-	userIDStr := r.URL.Query().Get("user_id")
-	userID, err := strconv.ParseInt(userIDStr, 10, 64)
-	if err != nil {
-		log.Printf("%s invalid user_id: %v", logPrefix, err)
-		http.Error(w, "invalid userID", http.StatusBadRequest)
+	type debitRequest struct {
+		UserID int64   `json:"user_id"`
+		Amount float64 `json:"amount"`
+	}
+
+	var reqData debitRequest
+	if err := json.NewDecoder(r.Body).Decode(&reqData); err != nil {
+		log.Printf("%s ошибка при чтении тела запроса: %v", logPrefix, err)
+		http.Error(w, "неверный формат запроса", http.StatusBadRequest)
 		return
 	}
 
-	amountStr := r.URL.Query().Get("amount")
-	if amountStr == "" {
-		http.Error(w, "missing amount", http.StatusBadRequest)
-		return
-	}
+	userID := reqData.UserID
+	amount := reqData.Amount
 
-	amount, err := strconv.ParseFloat(amountStr, 64)
-	if err != nil {
-		http.Error(w, "invalid amount", http.StatusBadRequest)
-		return
-	}
+	log.Printf("%s userID=%d amount=%.2f", logPrefix, userID, amount)
 
-	err = h.service.RefundBalance(r.Context(), userID, amount)
+	err := h.service.RefundBalance(r.Context(), userID, amount)
 
 	if err != nil {
 		if err.Error() == "insufficient funds" {

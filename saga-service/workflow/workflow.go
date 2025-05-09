@@ -44,7 +44,22 @@ func BookingSagaWorkflow(ctx workflow.Context, input BookingWorkflowInput) error
 			).Get(ctx, nil)
 		}
 	}()
+	defer func() {
+		if err == nil {
+			_ = workflow.ExecuteActivity(ctx,
+				acts.NotifyUser,
+				input.BookingData.UserID,
+				"Бронирование успешно",
+				updatedTraceCtx).Get(ctx, nil)
+		} else {
+			_ = workflow.ExecuteActivity(ctx,
+				acts.NotifyUser,
+				input.BookingData.UserID,
+				"Бронирование завершилось с ошибкой "+err.Error(),
+				updatedTraceCtx).Get(ctx, nil)
+		}
 
+	}()
 	//----------------------------------------------------------------------
 	// 1. Создаём бронирование
 	if err = workflow.ExecuteActivity(ctx,
@@ -93,11 +108,6 @@ func BookingSagaWorkflow(ctx workflow.Context, input BookingWorkflowInput) error
 	}
 
 	// 5. Уведомляем пользователя (не критично, поэтому без проверки Get)
-	_ = workflow.ExecuteActivity(ctx,
-		acts.NotifyUser,
-		input.BookingData.UserID,
-		"Бронирование успешно",
-		updatedTraceCtx).Get(ctx, nil)
 
 	logger.Info("Saga finished OK", "BookingID", createBookingResult.ID)
 	return nil

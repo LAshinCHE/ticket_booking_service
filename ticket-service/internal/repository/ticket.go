@@ -35,9 +35,11 @@ func NewRepository(driver *pgxpool.Pool) *Repository {
 func (r *Repository) GetAvailability(ctx context.Context, ticketID int) (bool, error) {
 	ctx, span := otel.Tracer("ticket-service").Start(ctx, "Repository.Ticket.GetAvailability")
 	defer span.End()
+
 	query := sq.Select(ticketColumns...).
 		From(ticketTable).
-		Where("id = $1", ticketID).PlaceholderFormat(sq.Dollar)
+		Where(sq.Eq{"id": ticketID}).
+		PlaceholderFormat(sq.Dollar)
 
 	rawQuery, args, err := query.ToSql()
 	if err != nil {
@@ -45,8 +47,7 @@ func (r *Repository) GetAvailability(ctx context.Context, ticketID int) (bool, e
 	}
 
 	var ticket schemas.Ticket
-
-	if err := pgxscan.Select(ctx, r.db, &ticket, rawQuery, args...); err != nil {
+	if err := pgxscan.Get(ctx, r.db, &ticket, rawQuery, args...); err != nil {
 		return false, err
 	}
 

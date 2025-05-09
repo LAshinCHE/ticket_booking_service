@@ -2,9 +2,9 @@ package http
 
 import (
 	"context"
+	"encoding/json"
 	"log"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/LAshinCHE/ticket_booking_service/notification-service/internal/models"
@@ -47,30 +47,31 @@ func MustRun(ctx context.Context, addr string, app NotificationService, shutdowm
 }
 
 func (h *Handler) Notify(w http.ResponseWriter, r *http.Request) {
+	logPrefix := "[NotifyService]"
 	propagator := propagation.TraceContext{}
 	ctx := propagator.Extract(r.Context(), propagation.HeaderCarrier(r.Header))
 
 	tracer := otel.Tracer("notification-service")
 	ctx, span := tracer.Start(ctx, "Notify")
 	defer span.End()
-	message := r.URL.Query().Get("message")
-	if message == "" {
-		http.Error(w, "missing message", http.StatusBadRequest)
-		return
+
+	type NotifyRequest struct {
+		UserID  int64  `json:"user_id"`
+		Message string `json:"message"`
 	}
 
-	userIDStr := r.URL.Query().Get("userID")
-	userID, err := strconv.ParseInt(userIDStr, 10, 64)
-	if err != nil {
-		http.Error(w, "missing message", http.StatusBadRequest)
+	var reqData NotifyRequest
+	if err := json.NewDecoder(r.Body).Decode(&reqData); err != nil {
+		log.Printf("%s ошибка при чтении тела запроса: %v", logPrefix, err)
+		http.Error(w, "неверный формат запроса", http.StatusBadRequest)
 		return
 	}
 
 	h.service.SendNotification(
 		r.Context(),
 		models.NotificationRequest{
-			UserID:  userID,
-			Message: message,
+			UserID:  reqData.UserID,
+			Message: reqData.Message,
 		})
 }
 

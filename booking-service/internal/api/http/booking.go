@@ -10,6 +10,7 @@ import (
 
 	_ "github.com/LAshinCHE/ticket_booking_service/booking-service/docs"
 	"github.com/LAshinCHE/ticket_booking_service/booking-service/internal/api/http/types"
+	"github.com/LAshinCHE/ticket_booking_service/booking-service/internal/metrics"
 	"github.com/LAshinCHE/ticket_booking_service/booking-service/internal/models"
 	"github.com/gorilla/mux"
 	httpSwagger "github.com/swaggo/http-swagger"
@@ -90,13 +91,26 @@ func (h *Handler) HealthCheck(writer http.ResponseWriter, request *http.Request)
 // @Failure 500 {string} string "internal server error"
 // @Router /booking/{booking_id} [get]
 func (h *Handler) GetBookingByIDHandler(writer http.ResponseWriter, request *http.Request) {
+	ctx, span := otel.Tracer("booking-service").Start(request.Context(), "GetBookingByIDHandler")
+	defer span.End()
+
+	handlerName := "GetBookingByIDHandler"
+
 	uuid, err := types.GetBookingByID(request)
 	if err != nil {
+		metrics.IncBadRespByHandler(ctx, handlerName, http.StatusBadRequest)
 		http.Error(writer, err.Error(), http.StatusBadRequest)
+		return
 	}
 
-	booking, err := h.service.GetBookingByID(request.Context(), uuid)
+	booking, err := h.service.GetBookingByID(ctx, uuid)
+	if err != nil {
+		metrics.IncBadRespByHandler(ctx, handlerName, http.StatusInternalServerError)
+		http.Error(writer, internalServerError.Error(), http.StatusInternalServerError)
+		return
+	}
 
+	metrics.IncOkRespByHandler(ctx, handlerName)
 	types.ProcessError(writer, err, &types.GetBookingByIDHandlerResponse{Booking: booking})
 }
 
@@ -115,16 +129,38 @@ func (h *Handler) CreateBookingHandler(writer http.ResponseWriter, request *http
 	ctx, span := otel.Tracer("booking-service").Start(request.Context(), "CreateBookingHandler")
 	defer span.End()
 
+	handlerName := "CreateBookingHandler"
+
 	data, err := types.CreateBooking(request)
 	if err != nil {
+		metrics.IncBadRespByHandler(ctx, handlerName, http.StatusBadRequest)
 		http.Error(writer, err.Error(), http.StatusBadRequest)
+		return
 	}
 
 	id, err := h.service.CreateBooking(ctx, data)
+	if err != nil {
+		metrics.IncBadRespByHandler(ctx, handlerName, http.StatusInternalServerError)
+		http.Error(writer, internalServerError.Error(), http.StatusInternalServerError)
+		return
+	}
 
+	metrics.IncOkRespByHandler(ctx, handlerName)
 	types.ProcessError(writer, err, &types.CreateBookingResponse{BookingID: id})
 }
 
+// CreateBookingInternalHandler godoc
+// @Summary Внутреннее создание бронирования
+// @Description Создание бронирования внутренним сервисом
+// @Tags internal
+// @Accept json
+// @Produce json
+// @Param booking body types.CreateBookingInternalRequest true "Данные для создания брони"
+// @Success 200 {object} types.CreateBookingResponse
+// @Failure 400 {string} string "invalid request"
+// @Failure 500 {string} string "internal server error"
+// @Router /internal/booking/create [post]
+// @Security ApiKeyAuth
 func (h *Handler) CreateBookingInternalHandler(w http.ResponseWriter, r *http.Request) {
 
 	var req types.CreateBookingInternalRequest
@@ -152,6 +188,18 @@ func (h *Handler) CreateBookingInternalHandler(w http.ResponseWriter, r *http.Re
 	types.ProcessError(w, err, &types.CreateBookingResponse{BookingID: req.BookingID})
 }
 
+// DeleteBookingInternalHandler godoc
+// @Summary Внутреннее удаление бронирования
+// @Description Удаление бронирования внутренним сервисом
+// @Tags internal
+// @Accept json
+// @Produce plain
+// @Param booking body types.DeleteBookingInternalRequest true "Данные для удаления брони"
+// @Success 200 {string} string "ok"
+// @Failure 400 {string} string "invalid request"
+// @Failure 500 {string} string "failed to create booking"
+// @Router /internal/booking/delete [delete]
+// @Security ApiKeyAuth
 func (h *Handler) DeleteBookingInternalHandler(w http.ResponseWriter, r *http.Request) {
 	var err error
 	defer log.Printf("BOOKING SERVICE: DELETE_BOOKING err %s \n", err)

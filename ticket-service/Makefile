@@ -1,4 +1,4 @@
-.PHONY
+.PHONY: migrate swagger-inits
 migrate:
 	goose -dir ./migrations postgres "postgresql://ticket:ticketpass@localhost:5433/ticketdb?sslmode=disable" up
 

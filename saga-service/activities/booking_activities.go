@@ -139,10 +139,15 @@ func (a *BookingActivities) ReserveTicket(
 	propagator.Inject(ctx, propagation.HeaderCarrier(req.Header))
 
 	resp, err := a.SVC.HTTPClient.Do(req)
+
 	if err != nil {
 		return traceCtx, fmt.Errorf("http request: %w", err)
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 400 {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("ticket service returned error: %s, status: %d", string(bodyBytes), resp.StatusCode)
+	}
 
 	carrier := propagation.MapCarrier{}
 	propagator.Inject(ctx, carrier)
@@ -206,6 +211,10 @@ func (a *BookingActivities) WithdrawMoney(
 		return nil, fmt.Errorf("http request: %w", err)
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 400 {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("payment service returned error: %s, status: %d", string(bodyBytes), resp.StatusCode)
+	}
 	carrier := propagation.MapCarrier{}
 	propagator.Inject(ctx, carrier)
 	return carrier, nil

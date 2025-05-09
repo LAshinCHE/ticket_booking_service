@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.opentelemetry.io/otel"
@@ -46,9 +47,9 @@ func (r *Repository) DebitUserBalance(ctx context.Context, userID int64, amount 
 	if err != nil {
 		return fmt.Errorf("select balance: %w", err)
 	}
-
-	if currentBalance < amount {
-		return ErrInsufficientFunds
+	log.Printf("CurentBalance: %f, ammount %f", currentBalance, amount)
+	if currentBalance-amount < 0 {
+		return fmt.Errorf("Curent balance less than ammount")
 	}
 
 	_, err = tx.Exec(ctx, `

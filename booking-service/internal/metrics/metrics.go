@@ -7,7 +7,9 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/metric"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 )
 
 const (
@@ -22,10 +24,32 @@ var (
 	badRespByHandlerTotal           metric.Int64Counter
 )
 
+// func StartMetricsEndpoint() {
+// 	go func() {
+// 		http.Handle("/metrics", promhttp.Handler())
+// 		if err := http.ListenAndServe(":2112", nil); err != nil {
+// 			log.Fatalf("failed to start /metrics: %v", err)
+// 		}
+// 	}()
+// }
+
 func InitMetrics() {
+	ctx := context.Background()
+
+	exporter, err := otlpmetricgrpc.New(ctx,
+		otlpmetricgrpc.WithEndpoint("otel-collector:4317"),
+		otlpmetricgrpc.WithInsecure(),
+	)
+	if err != nil {
+		log.Fatalf("failed to create OTLP exporter: %v", err)
+	}
+
+	reader := sdkmetric.NewPeriodicReader(exporter)
+	provider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+	otel.SetMeterProvider(provider)
+
 	meter := otel.GetMeterProvider().Meter("booking-service-metrics")
 
-	var err error
 	notifiedPositionsByContactTotal, err = meter.Int64Counter(
 		"bakerbot_notified_positions_by_contact_total",
 		metric.WithDescription("Total number of notified positions by contact"),

@@ -1,77 +1,180 @@
 {
-    "title": "Microservices Observability",
-    "schemaVersion": 35,
+  "dashboard": {
+    "id": null,
+    "uid": "pflgxl3vd",
+    "title": "Saga\u2011Service Metrics",
+    "tags": [
+      "saga",
+      "otel",
+      "service"
+    ],
+    "timezone": "browser",
+    "schemaVersion": 38,
     "version": 1,
     "refresh": "5s",
-    "templating": {
-      "list": [
-        {
-          "name": "service",
-          "type": "query",
-          "datasource": "Prometheus",
-          "query": "label_values(http_server_requests_total, job)",
-          "multi": true,
-          "includeAll": true,
-          "refresh": 2
-        }
-      ]
-    },
     "panels": [
       {
-        "id": 1,
         "type": "timeseries",
-        "title": "Requests per second",
-        "datasource": "Prometheus",
+        "title": "Saga Started / Succeeded / Failed (rate per min)",
+        "datasource": "$DS_PROM",
         "targets": [
           {
-            "expr": "sum(rate(http_server_requests_total{job=~\"$service\"}[1m])) by (job)",
-            "legendFormat": "{{job}}",
-            "refId": "A"
+            "expr": "rate(saga_started_total{service_name=\"$service\"}[1m])",
+            "legendFormat": "started"
+          },
+          {
+            "expr": "rate(saga_succeeded_total{service_name=\"$service\"}[1m])",
+            "legendFormat": "succeeded"
+          },
+          {
+            "expr": "rate(saga_failed_total{service_name=\"$service\"}[1m])",
+            "legendFormat": "failed"
           }
-        ]
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 24,
+          "x": 0,
+          "y": 0
+        },
+        "id": 1
       },
       {
-        "id": 2,
-        "type": "timeseries",
-        "title": "5xx Error rate (%)",
-        "datasource": "Prometheus",
+        "type": "gauge",
+        "title": "Saga Success Rate (%)",
+        "datasource": "$DS_PROM",
+        "options": {
+          "min": 0,
+          "max": 100
+        },
         "fieldConfig": {
-          "defaults": {"unit": "percent"}
+          "defaults": {
+            "unit": "percent"
+          }
         },
         "targets": [
           {
-            "expr": "(sum(rate(http_server_requests_total{job=~\"$service\",code=~\"5..\"}[5m])) by (job)) / (sum(rate(http_server_requests_total{job=~\"$service\"}[5m])) by (job)) * 100",
-            "legendFormat": "{{job}}",
-            "refId": "A"
+            "expr": "100 * (saga_succeeded_total{service_name=\"$service\"} / saga_started_total{service_name=\"$service\"})"
           }
-        ]
+        ],
+        "gridPos": {
+          "h": 6,
+          "w": 8,
+          "x": 0,
+          "y": 8
+        },
+        "id": 2
       },
       {
-        "id": 3,
         "type": "timeseries",
-        "title": "Latency p95 (s)",
-        "datasource": "Prometheus",
+        "title": "Activity Succeeded (rate per min)",
+        "datasource": "$DS_PROM",
         "targets": [
           {
-            "expr": "histogram_quantile(0.95, sum(rate(http_server_request_duration_seconds_bucket{job=~\"$service\"}[5m])) by (le,job))",
-            "legendFormat": "{{job}}",
-            "refId": "A"
+            "expr": "rate(saga_activity_total{activity=\"booking\",status=\"succeeded\"}[1m])",
+            "legendFormat": "booking"
+          },
+          {
+            "expr": "rate(saga_activity_total{activity=\"ticket\",status=\"succeeded\"}[1m])",
+            "legendFormat": "ticket"
+          },
+          {
+            "expr": "rate(saga_activity_total{activity=\"payment\",status=\"succeeded\"}[1m])",
+            "legendFormat": "payment"
+          },
+          {
+            "expr": "rate(saga_activity_total{activity=\"notification\",status=\"succeeded\"}[1m])",
+            "legendFormat": "notification"
           }
-        ]
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 24,
+          "x": 0,
+          "y": 14
+        },
+        "id": 3
       },
       {
-        "id": 4,
-        "type": "timeseries",
-        "title": "DB Connections",
-        "datasource": "Prometheus",
+        "type": "barGauge",
+        "title": "Activity Failures (last 5m)",
+        "datasource": "$DS_PROM",
         "targets": [
           {
-            "expr": "pg_stat_activity_count{job=~\".*-db\"}",
-            "legendFormat": "{{datname}}",
-            "refId": "A"
+            "expr": "increase(saga_activity_total{activity=\"booking\",status=\"failed\"}[5m])",
+            "legendFormat": "booking"
+          },
+          {
+            "expr": "increase(saga_activity_total{activity=\"ticket\",status=\"failed\"}[5m])",
+            "legendFormat": "ticket"
+          },
+          {
+            "expr": "increase(saga_activity_total{activity=\"payment\",status=\"failed\"}[5m])",
+            "legendFormat": "payment"
+          },
+          {
+            "expr": "increase(saga_activity_total{activity=\"notification\",status=\"failed\"}[5m])",
+            "legendFormat": "notification"
           }
-        ]
+        ],
+        "gridPos": {
+          "h": 6,
+          "w": 12,
+          "x": 8,
+          "y": 8
+        },
+        "id": 4
+      },
+      {
+        "type": "timeseries",
+        "title": "Activity Latency (avg ms)",
+        "datasource": "$DS_PROM",
+        "targets": [
+          {
+            "expr": "rate(saga_activity_latency_ms_sum{activity=\"booking\"}[1m]) / rate(saga_activity_latency_ms_count{activity=\"booking\"}[1m])",
+            "legendFormat": "booking"
+          },
+          {
+            "expr": "rate(saga_activity_latency_ms_sum{activity=\"ticket\"}[1m]) / rate(saga_activity_latency_ms_count{activity=\"ticket\"}[1m])",
+            "legendFormat": "ticket"
+          },
+          {
+            "expr": "rate(saga_activity_latency_ms_sum{activity=\"payment\"}[1m]) / rate(saga_activity_latency_ms_count{activity=\"payment\"}[1m])",
+            "legendFormat": "payment"
+          },
+          {
+            "expr": "rate(saga_activity_latency_ms_sum{activity=\"notification\"}[1m]) / rate(saga_activity_latency_ms_count{activity=\"notification\"}[1m])",
+            "legendFormat": "notification"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 24,
+          "x": 0,
+          "y": 22
+        },
+        "id": 5
       }
-    ]
-  }
-  
+    ],
+    "templating": {
+      "list": [
+        {
+          "type": "datasource",
+          "name": "DS_PROM",
+          "label": "Datasource",
+          "query": "prometheus",
+          "refresh": 1
+        },
+        {
+          "name": "service",
+          "label": "Service name",
+          "type": "query",
+          "datasource": "$DS_PROM",
+          "refresh": 1,
+          "query": "label_values(saga_started_total, service_name)"
+        }
+      ]
+    }
+  },
+  "overwrite": false
+}

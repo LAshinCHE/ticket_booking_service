@@ -8,6 +8,7 @@ import (
 	"syscall"
 
 	"github.com/LAshinCHE/ticket_booking_service/saga-service/activities"
+	"github.com/LAshinCHE/ticket_booking_service/saga-service/metrics"
 	tracer "github.com/LAshinCHE/ticket_booking_service/saga-service/trace"
 	sagawf "github.com/LAshinCHE/ticket_booking_service/saga-service/workflow"
 	"go.temporal.io/sdk/client"
@@ -35,6 +36,13 @@ func main() {
 		"http://payment-service:8083",
 		"http://notification-service:8084",
 	)
+
+	if err := metrics.Init(ctx, "otel-collector:4317", "saga-service"); err != nil {
+		log.Fatalf("metrics init: %v", err)
+	}
+
+	defer metrics.Shutdown(ctx)
+
 	acts := activities.NewBookingActivities(svcs)
 	w := worker.New(tc, "BOOKING_SAGA_QUEUE", worker.Options{})
 	log.Println("Registrate worker")

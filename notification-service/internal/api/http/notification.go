@@ -24,7 +24,7 @@ func MustRun(ctx context.Context, addr string, app NotificationService, shutdowm
 
 	r := mux.NewRouter()
 	r.HandleFunc("/", h.HealthCheck).Methods("GET")
-	r.HandleFunc("/notify", h.Notify).Methods("GET")
+	r.HandleFunc("/notify", h.Notify).Methods("POST")
 
 	server := http.Server{
 		Addr:    addr,

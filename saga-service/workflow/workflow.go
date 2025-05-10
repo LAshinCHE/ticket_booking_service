@@ -1,16 +1,21 @@
 package workflow
 
 import (
+	"context"
 	"time"
 
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/workflow"
 
 	"github.com/LAshinCHE/ticket_booking_service/saga-service/activities"
+	"github.com/LAshinCHE/ticket_booking_service/saga-service/metrics"
 )
 
 func BookingSagaWorkflow(ctx workflow.Context, input BookingWorkflowInput) error {
-
+	workflow.SideEffect(ctx, func(workflow.Context) interface{} {
+		metrics.IncSagaStarted(context.Background())
+		return nil
+	})
 	logger := workflow.GetLogger(ctx)
 
 	logger.Info("Saga started",
@@ -34,7 +39,6 @@ func BookingSagaWorkflow(ctx workflow.Context, input BookingWorkflowInput) error
 	var createBookingResult activities.CreateBookingResulet
 	var updatedTraceCtx map[string]string
 
-	// Компенсация на случай дальнейших сбоев
 	defer func() {
 		if err != nil {
 			workflow.ExecuteActivity(ctx,
@@ -42,6 +46,10 @@ func BookingSagaWorkflow(ctx workflow.Context, input BookingWorkflowInput) error
 				input.BookingData.ID,
 				updatedTraceCtx,
 			).Get(ctx, nil)
+			workflow.SideEffect(ctx, func(workflow.Context) interface{} {
+				metrics.IncSagaFailed(context.Background(), err)
+				return nil
+			})
 		}
 	}()
 	defer func() {
@@ -108,7 +116,10 @@ func BookingSagaWorkflow(ctx workflow.Context, input BookingWorkflowInput) error
 	}
 
 	// 5. Уведомляем пользователя (не критично, поэтому без проверки Get)
-
+	workflow.SideEffect(ctx, func(workflow.Context) interface{} {
+		metrics.IncSagaSucceeded(context.Background())
+		return nil
+	})
 	logger.Info("Saga finished OK", "BookingID", createBookingResult.ID)
 	return nil
 }

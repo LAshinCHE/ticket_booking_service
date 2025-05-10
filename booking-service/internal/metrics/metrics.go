@@ -50,16 +50,12 @@ func InitMetrics() {
 
 	meter := otel.GetMeterProvider().Meter("booking-service-metrics")
 
-	notifiedPositionsByContactTotal, err = meter.Int64Counter(
-		"bakerbot_notified_positions_by_contact_total",
-		metric.WithDescription("Total number of notified positions by contact"),
-	)
 	if err != nil {
 		log.Fatalf("failed to create metric: %v", err)
 	}
 
 	okRespByHandlerTotal, err = meter.Int64Counter(
-		"bakerbot_ok_response_by_handler_total",
+		"booking_ok_response_by_handler_total",
 		metric.WithDescription("Total number of OK responses by handler"),
 	)
 	if err != nil {
@@ -67,18 +63,12 @@ func InitMetrics() {
 	}
 
 	badRespByHandlerTotal, err = meter.Int64Counter(
-		"bakerbot_bad_response_by_handler_total",
+		"booking_bad_response_by_handler_total",
 		metric.WithDescription("Total number of BAD responses by handler with response code"),
 	)
 	if err != nil {
 		log.Fatalf("failed to create metric: %v", err)
 	}
-}
-
-func AddNotifiedPositionsByContactTotal(ctx context.Context, cnt int64, contact string) {
-	notifiedPositionsByContactTotal.Add(ctx, cnt, metric.WithAttributes(
-		attribute.String(contactLabel, contact),
-	))
 }
 
 func IncOkRespByHandler(ctx context.Context, handler string) {

@@ -70,13 +70,3 @@ func (s *TemporalClient) StartBookingSaga(ctx context.Context, req models.Create
 
 	return nil
 }
-
-// 	var result string
-// 	err = we.Get(context.Background(), &result)
-// 	if err != nil {
-// 		log.Fatalln("Unable get workflow result", err)
-// 	}
-
-// 	log.Println("Workflow result:", result)
-// 	return err
-// }

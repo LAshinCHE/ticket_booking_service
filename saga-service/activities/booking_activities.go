@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/LAshinCHE/ticket_booking_service/saga-service/metrics"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
 )
@@ -57,13 +58,23 @@ func (a *BookingActivities) CreateBooking(
 	price float64,
 	traceCtx map[string]string,
 ) (CreateBookingResulet, error) {
+
 	propagator := propagation.TraceContext{}
-	parentCtx := propagator.Extract(context.Background(), propagation.MapCarrier(traceCtx))
+	parentCtx := propagator.Extract(context.Background(),
+		propagation.MapCarrier(traceCtx))
 
 	tracer := otel.Tracer("saga-activities")
 	ctx, span := tracer.Start(parentCtx, "Activity.CreateBooking")
 	defer span.End()
-	log.Println("CreateBooking booking id:", bookingID)
+
+	start := time.Now()
+	metrics.IncActivityStarted(ctx, metrics.ActivityBooking)
+	defer func() {
+		metrics.RecordActivityLatency(ctx,
+			metrics.ActivityBooking,
+			time.Since(start))
+	}()
+
 	payload := struct {
 		BookingID int     `json:"booking_id"`
 		UserID    int     `json:"user_id"`
@@ -72,27 +83,38 @@ func (a *BookingActivities) CreateBooking(
 	}{bookingID, userID, ticketID, price}
 
 	raw, _ := json.Marshal(payload)
-	req, _ := http.NewRequestWithContext(ctx, http.MethodPost, a.SVC.BookingURL+"/internal/booking/create", bytes.NewReader(raw))
+	req, _ := http.NewRequestWithContext(ctx,
+		http.MethodPost,
+		a.SVC.BookingURL+"/internal/booking/create",
+		bytes.NewReader(raw))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "super-secure-saga-token")
 	propagator.Inject(ctx, propagation.HeaderCarrier(req.Header))
 
 	resp, err := a.SVC.HTTPClient.Do(req)
 	if err != nil {
+		metrics.IncActivityFailed(ctx, metrics.ActivityBooking, err)
 		return CreateBookingResulet{}, fmt.Errorf("http request: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode >= 300 {
-		return CreateBookingResulet{}, fmt.Errorf("create booking failed: %d", resp.StatusCode)
+		serr := fmt.Errorf("create booking failed: %d", resp.StatusCode)
+		metrics.IncActivityFailed(ctx, metrics.ActivityBooking, serr)
+		return CreateBookingResulet{}, serr
 	}
+
 	var respData CreateBookingResulet
 	if err := json.NewDecoder(resp.Body).Decode(&respData); err != nil {
+		metrics.IncActivityFailed(ctx, metrics.ActivityBooking, err)
 		return CreateBookingResulet{}, fmt.Errorf("decode booking response: %w", err)
 	}
+
 	carrier := propagation.MapCarrier{}
 	propagator.Inject(ctx, carrier)
 	respData.TraceCtx = carrier
+
+	metrics.IncActivitySucceeded(ctx, metrics.ActivityBooking)
 	return respData, nil
 }
 
@@ -123,34 +145,53 @@ func (a *BookingActivities) ReserveTicket(
 	ticketID int,
 	traceCtx map[string]string,
 ) (map[string]string, error) {
+
 	propagator := propagation.TraceContext{}
-	parentCtx := propagator.Extract(context.Background(), propagation.MapCarrier(traceCtx))
+	parentCtx := propagator.Extract(context.Background(),
+		propagation.MapCarrier(traceCtx))
 
 	tracer := otel.Tracer("saga-activities")
 	ctx, span := tracer.Start(parentCtx, "Activity.ReserveTicket")
 	defer span.End()
 
-	ticketStrId := strconv.Itoa(ticketID)
-	req, err := http.NewRequestWithContext(ctx, http.MethodPut, a.SVC.TicketURL+"/ticket/"+ticketStrId+"/reserve", nil)
+	start := time.Now()
+	metrics.IncActivityStarted(ctx, metrics.ActivityTicket)
+	defer func() {
+		metrics.RecordActivityLatency(ctx,
+			metrics.ActivityTicket,
+			time.Since(start))
+	}()
+
+	ticketStrID := strconv.Itoa(ticketID)
+	req, err := http.NewRequestWithContext(ctx,
+		http.MethodPut,
+		a.SVC.TicketURL+"/ticket/"+ticketStrID+"/reserve", nil)
 	if err != nil {
+		metrics.IncActivityFailed(ctx, metrics.ActivityTicket, err)
 		return traceCtx, err
 	}
 
 	propagator.Inject(ctx, propagation.HeaderCarrier(req.Header))
 
 	resp, err := a.SVC.HTTPClient.Do(req)
-
 	if err != nil {
+		metrics.IncActivityFailed(ctx, metrics.ActivityTicket, err)
 		return traceCtx, fmt.Errorf("http request: %w", err)
 	}
 	defer resp.Body.Close()
+
 	if resp.StatusCode < 200 || resp.StatusCode >= 400 {
 		bodyBytes, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("ticket service returned error: %s, status: %d", string(bodyBytes), resp.StatusCode)
+		serr := fmt.Errorf("ticket service returned error: %s, status: %d",
+			string(bodyBytes), resp.StatusCode)
+		metrics.IncActivityFailed(ctx, metrics.ActivityTicket, serr)
+		return nil, serr
 	}
 
 	carrier := propagation.MapCarrier{}
 	propagator.Inject(ctx, carrier)
+
+	metrics.IncActivitySucceeded(ctx, metrics.ActivityTicket)
 	return carrier, nil
 }
 
@@ -189,12 +230,22 @@ func (a *BookingActivities) WithdrawMoney(
 	amount float64,
 	traceCtx map[string]string,
 ) (map[string]string, error) {
+
 	propagator := propagation.TraceContext{}
-	parentCtx := propagator.Extract(context.Background(), propagation.MapCarrier(traceCtx))
+	parentCtx := propagator.Extract(context.Background(),
+		propagation.MapCarrier(traceCtx))
 
 	tracer := otel.Tracer("saga-activities")
 	ctx, span := tracer.Start(parentCtx, "Activity.WithdrawMoney")
 	defer span.End()
+
+	start := time.Now()
+	metrics.IncActivityStarted(ctx, metrics.ActivityPayment)
+	defer func() {
+		metrics.RecordActivityLatency(ctx,
+			metrics.ActivityPayment,
+			time.Since(start))
+	}()
 
 	payload := struct {
 		UserID int     `json:"user_id"`
@@ -202,21 +253,32 @@ func (a *BookingActivities) WithdrawMoney(
 	}{userID, amount}
 
 	raw, _ := json.Marshal(payload)
-	req, _ := http.NewRequestWithContext(ctx, http.MethodPost, a.SVC.PaymentURL+"/payments/charge", bytes.NewReader(raw))
+	req, _ := http.NewRequestWithContext(ctx,
+		http.MethodPost,
+		a.SVC.PaymentURL+"/payments/charge",
+		bytes.NewReader(raw))
 	req.Header.Set("Content-Type", "application/json")
 	propagator.Inject(ctx, propagation.HeaderCarrier(req.Header))
 
 	resp, err := a.SVC.HTTPClient.Do(req)
 	if err != nil {
+		metrics.IncActivityFailed(ctx, metrics.ActivityPayment, err)
 		return nil, fmt.Errorf("http request: %w", err)
 	}
 	defer resp.Body.Close()
+
 	if resp.StatusCode < 200 || resp.StatusCode >= 400 {
 		bodyBytes, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("payment service returned error: %s, status: %d", string(bodyBytes), resp.StatusCode)
+		serr := fmt.Errorf("payment service returned error: %s, status: %d",
+			string(bodyBytes), resp.StatusCode)
+		metrics.IncActivityFailed(ctx, metrics.ActivityPayment, serr)
+		return nil, serr
 	}
+
 	carrier := propagation.MapCarrier{}
 	propagator.Inject(ctx, carrier)
+
+	metrics.IncActivitySucceeded(ctx, metrics.ActivityPayment)
 	return carrier, nil
 }
 
@@ -260,12 +322,22 @@ func (a *BookingActivities) NotifyUser(
 	message string,
 	traceCtx map[string]string,
 ) error {
+
 	propagator := propagation.TraceContext{}
-	parentCtx := propagator.Extract(context.Background(), propagation.MapCarrier(traceCtx))
+	parentCtx := propagator.Extract(context.Background(),
+		propagation.MapCarrier(traceCtx))
 
 	tracer := otel.Tracer("saga-activities")
 	ctx, span := tracer.Start(parentCtx, "Activity.NotifyUser")
 	defer span.End()
+
+	start := time.Now()
+	metrics.IncActivityStarted(ctx, metrics.ActivityNotification)
+	defer func() {
+		metrics.RecordActivityLatency(ctx,
+			metrics.ActivityNotification,
+			time.Since(start))
+	}()
 
 	payload := struct {
 		UserID  int    `json:"user_id"`
@@ -273,16 +345,28 @@ func (a *BookingActivities) NotifyUser(
 	}{userID, message}
 
 	raw, _ := json.Marshal(payload)
-	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, a.SVC.NotifyURL+"/notify", bytes.NewReader(raw))
+	req, _ := http.NewRequestWithContext(ctx,
+		http.MethodPost,
+		a.SVC.NotifyURL+"/notify",
+		bytes.NewReader(raw))
 	req.Header.Set("Content-Type", "application/json")
 	propagator.Inject(ctx, propagation.HeaderCarrier(req.Header))
 
 	resp, err := a.SVC.HTTPClient.Do(req)
 	if err != nil {
+		metrics.IncActivityFailed(ctx, metrics.ActivityNotification, err)
 		return fmt.Errorf("http request: %w", err)
 	}
 	defer resp.Body.Close()
-	return err
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 400 {
+		serr := fmt.Errorf("notify service error: status %d", resp.StatusCode)
+		metrics.IncActivityFailed(ctx, metrics.ActivityNotification, serr)
+		return serr
+	}
+
+	metrics.IncActivitySucceeded(ctx, metrics.ActivityNotification)
+	return nil
 }
 
 // 1* Отмена бронирования

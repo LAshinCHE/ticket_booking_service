@@ -19,9 +19,9 @@ func main() {
 	}
 	defer fileUser.Close()
 
-	for i := 0; i <= 300; i++ {
+	for i := 0; i <= 1000; i++ {
 		id := i
-		balance := rand.Float64()*400 + 200
+		balance := rand.Float64()*400 + 100
 
 		fmt.Fprintf(fileUser, "INSERT INTO users (id, balance) VALUES ('%d', %.2f);\n", id, balance)
 		ids = append(ids, id)

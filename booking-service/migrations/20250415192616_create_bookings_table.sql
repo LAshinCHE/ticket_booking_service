@@ -1,7 +1,7 @@
 -- +goose Up
 -- +goose StatementBegin
 CREATE TABLE bookings (
-    id int PRIMARY KEY,
+    id  SERIAL PRIMARY KEY,
     user_id int NOT NULL,
     ticket_id int NOT NULL,
     status TEXT NOT NULL,

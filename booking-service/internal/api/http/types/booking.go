@@ -2,6 +2,7 @@ package types
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
 
@@ -16,13 +17,12 @@ type GetBookingByIDHandlerResponse struct {
 }
 
 type CreateBookingResponse struct {
-	BookingID int
+	BookingID int `json:"bookingID"`
 }
 
 type CreateBookingInternalRequest struct {
-	BookingID int `json:"booking_id"`
-	UserID    int `json:"user_id"`
-	TicketID  int `json:"ticket_id"`
+	UserID   int `json:"user_id"`
+	TicketID int `json:"ticket_id"`
 }
 
 type DeleteBookingInternalRequest struct {
@@ -33,7 +33,7 @@ func GetBookingByID(r *http.Request) (int, error) {
 	vars := mux.Vars(r)
 	idStr, ok := vars["booking_id"]
 	if !ok {
-		return 0, MissingUUID
+		return 0, errors.New("[Bad request]: Missing id")
 	}
 	id, err := strconv.Atoi(idStr)
 	if err != nil {

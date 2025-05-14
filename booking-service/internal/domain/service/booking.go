@@ -12,13 +12,13 @@ import (
 type RepositoryBooking interface {
 	GetBookingByID(ctx context.Context, id int) (*models.Booking, error)
 	CheckTicketIsBooked(ctx context.Context, ticketID int) (bool, error)
-	CreateBooking(ctx context.Context, booking models.Booking) error
+	CreateBooking(ctx context.Context, booking models.BookingRequset) (int, error)
 	DeleteBookingByID(ctx context.Context, bookingID int) error
 	BookingChangeStatus(ctx context.Context, bookingID int, status models.BookingStatus) error
 }
 
 type SagaClient interface {
-	StartBookingSaga(ctx context.Context, prams models.CreateBookingData) error
+	StartBookingSaga(ctx context.Context, prams models.CreateBookingData) (int, error)
 }
 
 type Deps struct {
@@ -52,7 +52,7 @@ func (b *Booking) GetBookingByID(ctx context.Context, id int) (*models.Booking, 
 	return b.RepositoryBooking.GetBookingByID(ctx, id)
 }
 
-func (b *Booking) CreateBookingInternal(ctx context.Context, booking models.Booking) error {
+func (b *Booking) CreateBookingInternal(ctx context.Context, booking models.BookingRequset) (int, error) {
 	ctx, span := otel.Tracer("booking-service").Start(ctx, "Service.Booking.CreateBookingInternal")
 	defer span.End()
 	booking.Status = models.BookingStatusDraft
@@ -68,16 +68,16 @@ func (b *Booking) DeleteBookingInternal(ctx context.Context, bookingID int) erro
 func (b *Booking) CreateBooking(ctx context.Context, req models.CreateBookingData) (int, error) {
 	ctx, span := otel.Tracer("booking-service").Start(ctx, "BookingService.CreateBooking")
 	defer span.End()
-
-	if err := b.SagaClient.StartBookingSaga(ctx, req); err != nil {
+	id, err := b.SagaClient.StartBookingSaga(ctx, req)
+	if err != nil {
 		log.Printf("failed to start booking saga: %v \n", err)
 		return 0, err
 	}
-
-	if err := b.RepositoryBooking.BookingChangeStatus(ctx, req.ID, models.BookingStatusReserved); err != nil {
+	log.Println("Booking ID is: ", id)
+	if err := b.RepositoryBooking.BookingChangeStatus(ctx, id, models.BookingStatusReserved); err != nil {
 		log.Printf("failed to change booking status: %v \n", err)
 		return 0, err
 	}
 
-	return req.ID, nil
+	return id, nil
 }

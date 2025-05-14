@@ -11,7 +11,7 @@ import (
 	"github.com/LAshinCHE/ticket_booking_service/saga-service/metrics"
 )
 
-func BookingSagaWorkflow(ctx workflow.Context, input BookingWorkflowInput) error {
+func BookingSagaWorkflow(ctx workflow.Context, input BookingWorkflowInput) (int, error) {
 	workflow.SideEffect(ctx, func(workflow.Context) interface{} {
 		metrics.IncSagaStarted(context.Background())
 		return nil
@@ -19,7 +19,6 @@ func BookingSagaWorkflow(ctx workflow.Context, input BookingWorkflowInput) error
 	logger := workflow.GetLogger(ctx)
 
 	logger.Info("Saga started",
-		"BookingID", input.BookingData.ID,
 		"UserID", input.BookingData.UserID,
 		"TicketID", input.BookingData.TicketID,
 		"Price", input.BookingData.Price,
@@ -38,20 +37,8 @@ func BookingSagaWorkflow(ctx workflow.Context, input BookingWorkflowInput) error
 	var acts *activities.BookingActivities
 	var createBookingResult activities.CreateBookingResulet
 	var updatedTraceCtx map[string]string
+	var bookingID int
 
-	defer func() {
-		if err != nil {
-			workflow.ExecuteActivity(ctx,
-				acts.CancelBooking,
-				input.BookingData.ID,
-				updatedTraceCtx,
-			).Get(ctx, nil)
-			workflow.SideEffect(ctx, func(workflow.Context) interface{} {
-				metrics.IncSagaFailed(context.Background(), err)
-				return nil
-			})
-		}
-	}()
 	defer func() {
 		if err == nil {
 			_ = workflow.ExecuteActivity(ctx,
@@ -71,18 +58,31 @@ func BookingSagaWorkflow(ctx workflow.Context, input BookingWorkflowInput) error
 	//----------------------------------------------------------------------
 	// 1. Создаём бронирование
 	if err = workflow.ExecuteActivity(ctx,
-		acts.CreateBooking, input.BookingData.ID, input.BookingData.UserID, input.BookingData.TicketID, input.BookingData.Price, input.TraceCtx).
+		acts.CreateBooking, input.BookingData.UserID, input.BookingData.TicketID, input.BookingData.Price, input.TraceCtx).
 		Get(ctx, &createBookingResult); err != nil {
-		return err
+		return -1, err
 	}
 	updatedTraceCtx = createBookingResult.TraceCtx
-
+	bookingID = createBookingResult.ID
 	defer func() {
 		if err != nil {
 			workflow.ExecuteActivity(ctx,
 				acts.MakeAvailableTicket,
 				input.BookingData.TicketID,
 				updatedTraceCtx).Get(ctx, nil)
+		}
+	}()
+
+	defer func() {
+		if err != nil {
+			workflow.ExecuteActivity(ctx,
+				acts.CancelBooking,
+				updatedTraceCtx,
+			).Get(ctx, nil)
+			workflow.SideEffect(ctx, func(workflow.Context) interface{} {
+				metrics.IncSagaFailed(context.Background(), err)
+				return nil
+			})
 		}
 	}()
 
@@ -93,7 +93,7 @@ func BookingSagaWorkflow(ctx workflow.Context, input BookingWorkflowInput) error
 		input.BookingData.TicketID,
 		updatedTraceCtx,
 	).Get(ctx, &updatedTraceCtx); err != nil {
-		return err
+		return -1, err
 	}
 
 	defer func() {
@@ -112,7 +112,7 @@ func BookingSagaWorkflow(ctx workflow.Context, input BookingWorkflowInput) error
 		input.BookingData.UserID,
 		input.BookingData.Price,
 		updatedTraceCtx).Get(ctx, nil); err != nil {
-		return err
+		return -1, err
 	}
 
 	// 5. Уведомляем пользователя (не критично, поэтому без проверки Get)
@@ -120,6 +120,6 @@ func BookingSagaWorkflow(ctx workflow.Context, input BookingWorkflowInput) error
 		metrics.IncSagaSucceeded(context.Background())
 		return nil
 	})
-	logger.Info("Saga finished OK", "BookingID", createBookingResult.ID)
-	return nil
+	logger.Info("Saga finished OK", "BookingID", bookingID)
+	return bookingID, nil
 }

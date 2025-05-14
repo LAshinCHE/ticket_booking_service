@@ -30,10 +30,8 @@ definitions:
     - BookingStatusCanceled
   models.CreateBookingData:
     properties:
-      id:
-        type: integer
       price:
-        type: integer
+        type: number
       ticketID:
         type: integer
       userID:
@@ -41,8 +39,6 @@ definitions:
     type: object
   types.CreateBookingInternalRequest:
     properties:
-      booking_id:
-        type: integer
       ticket_id:
         type: integer
       user_id:

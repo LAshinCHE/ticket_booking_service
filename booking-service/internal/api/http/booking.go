@@ -24,7 +24,7 @@ type (
 		CheckTicketIsBooking(ctx context.Context, ticketID int) (bool, error)
 		GetBookingByID(ctx context.Context, id int) (*models.Booking, error)
 		CreateBooking(ctx context.Context, req models.CreateBookingData) (int, error)
-		CreateBookingInternal(ctx context.Context, req models.Booking) error
+		CreateBookingInternal(ctx context.Context, req models.BookingRequset) (int, error)
 		DeleteBookingInternal(ctx context.Context, id int) error
 	}
 )
@@ -91,21 +91,28 @@ func (h *Handler) HealthCheck(writer http.ResponseWriter, request *http.Request)
 // @Failure 500 {string} string "internal server error"
 // @Router /booking/{booking_id} [get]
 func (h *Handler) GetBookingByIDHandler(writer http.ResponseWriter, request *http.Request) {
+	start := time.Now()
+
 	ctx, span := otel.Tracer("booking-service").Start(request.Context(), "GetBookingByIDHandler")
 	defer span.End()
 
 	handlerName := "GetBookingByIDHandler"
 
-	uuid, err := types.GetBookingByID(request)
+	defer func() {
+		duration := float64(time.Since(start).Milliseconds())
+		metrics.ObserveRequestDuration(ctx, handlerName, duration)
+	}()
+
+	id, err := types.GetBookingByID(request)
 	if err != nil {
-		metrics.IncBadRespByHandler(ctx, handlerName, http.StatusBadRequest)
+		metrics.IncClientErrorByHandler(ctx, handlerName, http.StatusBadRequest)
 		http.Error(writer, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	booking, err := h.service.GetBookingByID(ctx, uuid)
+	booking, err := h.service.GetBookingByID(ctx, id)
 	if err != nil {
-		metrics.IncBadRespByHandler(ctx, handlerName, http.StatusInternalServerError)
+		metrics.IncServerErrorByHandler(ctx, handlerName, http.StatusInternalServerError)
 		http.Error(writer, internalServerError.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -126,21 +133,26 @@ func (h *Handler) GetBookingByIDHandler(writer http.ResponseWriter, request *htt
 // @Failure 500 {string} string "internal server error"
 // @Router /booking/ [post]
 func (h *Handler) CreateBookingHandler(writer http.ResponseWriter, request *http.Request) {
+	start := time.Now()
 	ctx, span := otel.Tracer("booking-service").Start(request.Context(), "CreateBookingHandler")
 	defer span.End()
 
 	handlerName := "CreateBookingHandler"
+	defer func() {
+		duration := float64(time.Since(start).Milliseconds())
+		metrics.ObserveRequestDuration(ctx, handlerName, duration)
+	}()
 
 	data, err := types.CreateBooking(request)
 	if err != nil {
-		metrics.IncBadRespByHandler(ctx, handlerName, http.StatusBadRequest)
+		metrics.IncClientErrorByHandler(ctx, handlerName, http.StatusBadRequest)
 		http.Error(writer, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	id, err := h.service.CreateBooking(ctx, data)
 	if err != nil {
-		metrics.IncBadRespByHandler(ctx, handlerName, http.StatusInternalServerError)
+		metrics.IncServerErrorByHandler(ctx, handlerName, http.StatusInternalServerError)
 		http.Error(writer, internalServerError.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -162,7 +174,6 @@ func (h *Handler) CreateBookingHandler(writer http.ResponseWriter, request *http
 // @Router /internal/booking/create [post]
 // @Security ApiKeyAuth
 func (h *Handler) CreateBookingInternalHandler(w http.ResponseWriter, r *http.Request) {
-
 	var req types.CreateBookingInternalRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "invalid request", http.StatusBadRequest)
@@ -176,16 +187,15 @@ func (h *Handler) CreateBookingInternalHandler(w http.ResponseWriter, r *http.Re
 	ctx, span := tracer.Start(ctx, "CreateBookingInternalHandler")
 	defer span.End()
 
-	log.Println("Booking id is :", req.BookingID)
-	booking := models.Booking{
-		ID:       req.BookingID,
+	booking := models.BookingRequset{
 		UserID:   req.UserID,
 		TicketID: req.TicketID,
 	}
 
-	err := h.service.CreateBookingInternal(ctx, booking)
-	log.Println("Service error: ", err)
-	types.ProcessError(w, err, &types.CreateBookingResponse{BookingID: req.BookingID})
+	id, err := h.service.CreateBookingInternal(ctx, booking)
+	log.Println("[BookingCreateInternal]Booking id is :", id)
+	log.Println("[BookingCreateInternal]Service error: ", err)
+	types.ProcessError(w, err, &types.CreateBookingResponse{BookingID: id})
 }
 
 // DeleteBookingInternalHandler godoc

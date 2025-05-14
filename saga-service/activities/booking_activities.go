@@ -45,14 +45,13 @@ type BookingActivities struct {
 func NewBookingActivities(svc ServiceClients) *BookingActivities { return &BookingActivities{SVC: svc} }
 
 type CreateBookingResulet struct {
-	ID       int
+	ID       int `json:"bookingID"`
 	TraceCtx map[string]string
 }
 
 // 1. Создать бронирование
 func (a *BookingActivities) CreateBooking(
 	ctx context.Context,
-	bookingID int,
 	userID int,
 	ticketID int,
 	price float64,
@@ -76,11 +75,10 @@ func (a *BookingActivities) CreateBooking(
 	}()
 
 	payload := struct {
-		BookingID int     `json:"booking_id"`
-		UserID    int     `json:"user_id"`
-		TicketID  int     `json:"ticket_id"`
-		Price     float64 `json:"price"`
-	}{bookingID, userID, ticketID, price}
+		UserID   int     `json:"user_id"`
+		TicketID int     `json:"ticket_id"`
+		Price    float64 `json:"price"`
+	}{userID, ticketID, price}
 
 	raw, _ := json.Marshal(payload)
 	req, _ := http.NewRequestWithContext(ctx,

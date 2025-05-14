@@ -26,11 +26,16 @@ type Booking struct {
 	Status   BookingStatus
 }
 
+type BookingRequset struct {
+	UserID   int           `json:"userID"`
+	TicketID int           `json:"ticketID"`
+	Status   BookingStatus `json:"status"`
+}
+
 type CreateBookingData struct {
-	ID       int `json:"id"`
-	Price    int `json:"price"`
-	TicketID int `json:"ticketID"`
-	UserID   int `json:"userID"`
+	Price    float64 `json:"price"`
+	TicketID int     `json:"ticketID"`
+	UserID   int     `json:"userID"`
 }
 
 func MapBookingStatus(status string) BookingStatus {

@@ -28,24 +28,19 @@ const (
 var (
 	meter metric.Meter
 
-	// Saga‑level counters.
 	SagaStarted   metric.Int64Counter
 	SagaSucceeded metric.Int64Counter
 	SagaFailed    metric.Int64Counter
 
-	// Activity‑level counters (map for easy access by type).
 	activityStarted   map[ActivityType]metric.Int64Counter
 	activitySucceeded map[ActivityType]metric.Int64Counter
 	activityFailed    map[ActivityType]metric.Int64Counter
 
-	// Latency histogram (milliseconds).
 	ActivityLatencyMs metric.Float64Histogram
 
 	provider *sdkmetric.MeterProvider
 )
 
-// Init configures OpenTelemetry and all the instruments required by the saga‑service.
-// Call this once at process start (e.g. in main()).
 func Init(ctx context.Context, collectorEndpoint string, serviceName string) error {
 
 	exporter, err := otlpmetricgrpc.New(ctx,
@@ -70,10 +65,8 @@ func Init(ctx context.Context, collectorEndpoint string, serviceName string) err
 	)
 	otel.SetMeterProvider(provider)
 
-	// ----- meter -----
 	meter = otel.Meter("saga‑service/metrics")
 
-	// ----- saga counters -----
 	if SagaStarted, err = meter.Int64Counter("saga.started", metric.WithDescription("Total saga executions started")); err != nil {
 		return err
 	}
@@ -84,7 +77,6 @@ func Init(ctx context.Context, collectorEndpoint string, serviceName string) err
 		return err
 	}
 
-	// ----- activity counters -----
 	activityStarted = make(map[ActivityType]metric.Int64Counter)
 	activitySucceeded = make(map[ActivityType]metric.Int64Counter)
 	activityFailed = make(map[ActivityType]metric.Int64Counter)

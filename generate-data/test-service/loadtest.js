@@ -2,22 +2,20 @@ import http from 'k6/http';
 import { sleep } from 'k6';
 
 export const options = {
-  vus: 10,           
+  vus: 100,           
   duration: '10s'    
 };
 
 export default function () {
-  const ticket_id = Math.floor(Math.random() * 1000);       
-  const user_id = Math.floor(Math.random() * 1000);         
-  const payment = Math.floor(Math.random() * 1000) + 100;   
+  const ticketID = Math.floor(Math.random() * 1000) + __VU + __ITER;
+  const userID = Math.floor(Math.random() * 1000) + __VU + __ITER;
+  const price = Math.floor(Math.random() * 100) + 40;   
 
-  const booking_id = (__VU - 1) * 100000 + __ITER;
 
   const payload = JSON.stringify({
-    booking_id: booking_id,
-    ticket_id: ticket_id,
-    user_id: user_id,
-    payment: payment
+    ticketID: ticketID,
+    userID: userID,
+    price: price
   });
 
   const headers = { 'Content-Type': 'application/json' };

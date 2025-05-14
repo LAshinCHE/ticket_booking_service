@@ -23,11 +23,10 @@ func main() {
 		panic(err)
 	}
 	defer fileIds.Close()
-
-	for i := 0; i <= 300; i++ {
+	for i := 0; i <= 1000; i++ {
 		id := i
-		price := rand.Float64()*400 + 100
-		available := rand.Intn(2) == 0
+		price := rand.Float64()*100 + 100
+		available := true
 
 		fmt.Fprintf(fileTicket, "INSERT INTO tickets (id, price, available) VALUES ('%d', %.2f, %t);\n", id, price, available)
 		ticketIDs = append(ticketIDs, id)

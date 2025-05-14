@@ -267,11 +267,8 @@ const docTemplate = `{
         "models.CreateBookingData": {
             "type": "object",
             "properties": {
-                "id": {
-                    "type": "integer"
-                },
                 "price": {
-                    "type": "integer"
+                    "type": "number"
                 },
                 "ticketID": {
                     "type": "integer"
@@ -284,9 +281,6 @@ const docTemplate = `{
         "types.CreateBookingInternalRequest": {
             "type": "object",
             "properties": {
-                "booking_id": {
-                    "type": "integer"
-                },
                 "ticket_id": {
                     "type": "integer"
                 },

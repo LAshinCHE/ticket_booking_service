@@ -44,7 +44,7 @@ func MustRun(ctx context.Context, shutdownDur time.Duration, addr string, app se
 	// r.HandleFunc("/tickets/{ticket_id}", handler.UpdateTicketAvaibleHandler).Methods("PUT")
 
 	r.HandleFunc("/ticket/{ticket_id}/reserve", handler.ReservTicketHandler).Methods("PUT")
-	r.HandleFunc("/ticket/{ticket_id}/available", handler.MakeAvailableHandler).Methods("PUT")
+	r.HandleFunc("/ticket/{ticket_id}/release", handler.MakeAvailableHandler).Methods("PUT")
 
 	server := http.Server{
 		Addr:    addr,

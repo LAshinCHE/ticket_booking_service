@@ -68,25 +68,26 @@ func (r *Repository) CheckTicketIsBooked(ctx context.Context, ticketID int) (boo
 	return !exists, nil
 }
 
-func (r *Repository) CreateBooking(ctx context.Context, booking models.Booking) error {
+func (r *Repository) CreateBooking(ctx context.Context, booking models.BookingRequset) (int, error) {
 	ctx, span := otel.Tracer("booking-service").Start(ctx, "Repository.Booking.CreateBooking")
 	defer span.End()
 	query := sq.Insert(bookingTable).
-		Columns("id", "user_id", "ticket_id", "status").
-		Values(booking.ID, booking.UserID, booking.TicketID, booking.Status).
+		Columns("user_id", "ticket_id", "status").
+		Values(booking.UserID, booking.TicketID, booking.Status).
+		Suffix("RETURNING id").
 		PlaceholderFormat(sq.Dollar)
 
 	queryString, args, err := query.ToSql()
 	if err != nil {
-		return fmt.Errorf("failed to build insert booking sql: %w", err)
+		return -1, fmt.Errorf("failed to build insert booking sql: %w", err)
 	}
-
-	_, err = r.db.Exec(ctx, queryString, args...)
+	var bookingID int
+	err = r.db.QueryRow(ctx, queryString, args...).Scan(&bookingID)
 	if err != nil {
-		return fmt.Errorf("failed to execute insert booking: %w", err)
+		return -1, fmt.Errorf("failed to execute insert booking: %w", err)
 	}
 
-	return nil
+	return bookingID, nil
 }
 
 func (r *Repository) DeleteBookingByID(ctx context.Context, bookingID int) error {

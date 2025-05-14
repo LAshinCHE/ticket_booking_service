@@ -1,180 +1,507 @@
 {
-  "dashboard": {
-    "id": null,
-    "uid": "pflgxl3vd",
-    "title": "Saga\u2011Service Metrics",
-    "tags": [
-      "saga",
-      "otel",
-      "service"
-    ],
-    "timezone": "browser",
-    "schemaVersion": 38,
-    "version": 1,
-    "refresh": "5s",
-    "panels": [
+  "annotations": {
+    "list": [
       {
-        "type": "timeseries",
-        "title": "Saga Started / Succeeded / Failed (rate per min)",
-        "datasource": "$DS_PROM",
-        "targets": [
-          {
-            "expr": "rate(saga_started_total{service_name=\"$service\"}[1m])",
-            "legendFormat": "started"
-          },
-          {
-            "expr": "rate(saga_succeeded_total{service_name=\"$service\"}[1m])",
-            "legendFormat": "succeeded"
-          },
-          {
-            "expr": "rate(saga_failed_total{service_name=\"$service\"}[1m])",
-            "legendFormat": "failed"
-          }
-        ],
-        "gridPos": {
-          "h": 8,
-          "w": 24,
-          "x": 0,
-          "y": 0
-        },
-        "id": 1
-      },
-      {
-        "type": "gauge",
-        "title": "Saga Success Rate (%)",
-        "datasource": "$DS_PROM",
-        "options": {
-          "min": 0,
-          "max": 100
-        },
-        "fieldConfig": {
-          "defaults": {
-            "unit": "percent"
-          }
-        },
-        "targets": [
-          {
-            "expr": "100 * (saga_succeeded_total{service_name=\"$service\"} / saga_started_total{service_name=\"$service\"})"
-          }
-        ],
-        "gridPos": {
-          "h": 6,
-          "w": 8,
-          "x": 0,
-          "y": 8
-        },
-        "id": 2
-      },
-      {
-        "type": "timeseries",
-        "title": "Activity Succeeded (rate per min)",
-        "datasource": "$DS_PROM",
-        "targets": [
-          {
-            "expr": "rate(saga_activity_total{activity=\"booking\",status=\"succeeded\"}[1m])",
-            "legendFormat": "booking"
-          },
-          {
-            "expr": "rate(saga_activity_total{activity=\"ticket\",status=\"succeeded\"}[1m])",
-            "legendFormat": "ticket"
-          },
-          {
-            "expr": "rate(saga_activity_total{activity=\"payment\",status=\"succeeded\"}[1m])",
-            "legendFormat": "payment"
-          },
-          {
-            "expr": "rate(saga_activity_total{activity=\"notification\",status=\"succeeded\"}[1m])",
-            "legendFormat": "notification"
-          }
-        ],
-        "gridPos": {
-          "h": 8,
-          "w": 24,
-          "x": 0,
-          "y": 14
-        },
-        "id": 3
-      },
-      {
-        "type": "barGauge",
-        "title": "Activity Failures (last 5m)",
-        "datasource": "$DS_PROM",
-        "targets": [
-          {
-            "expr": "increase(saga_activity_total{activity=\"booking\",status=\"failed\"}[5m])",
-            "legendFormat": "booking"
-          },
-          {
-            "expr": "increase(saga_activity_total{activity=\"ticket\",status=\"failed\"}[5m])",
-            "legendFormat": "ticket"
-          },
-          {
-            "expr": "increase(saga_activity_total{activity=\"payment\",status=\"failed\"}[5m])",
-            "legendFormat": "payment"
-          },
-          {
-            "expr": "increase(saga_activity_total{activity=\"notification\",status=\"failed\"}[5m])",
-            "legendFormat": "notification"
-          }
-        ],
-        "gridPos": {
-          "h": 6,
-          "w": 12,
-          "x": 8,
-          "y": 8
-        },
-        "id": 4
-      },
-      {
-        "type": "timeseries",
-        "title": "Activity Latency (avg ms)",
-        "datasource": "$DS_PROM",
-        "targets": [
-          {
-            "expr": "rate(saga_activity_latency_ms_sum{activity=\"booking\"}[1m]) / rate(saga_activity_latency_ms_count{activity=\"booking\"}[1m])",
-            "legendFormat": "booking"
-          },
-          {
-            "expr": "rate(saga_activity_latency_ms_sum{activity=\"ticket\"}[1m]) / rate(saga_activity_latency_ms_count{activity=\"ticket\"}[1m])",
-            "legendFormat": "ticket"
-          },
-          {
-            "expr": "rate(saga_activity_latency_ms_sum{activity=\"payment\"}[1m]) / rate(saga_activity_latency_ms_count{activity=\"payment\"}[1m])",
-            "legendFormat": "payment"
-          },
-          {
-            "expr": "rate(saga_activity_latency_ms_sum{activity=\"notification\"}[1m]) / rate(saga_activity_latency_ms_count{activity=\"notification\"}[1m])",
-            "legendFormat": "notification"
-          }
-        ],
-        "gridPos": {
-          "h": 8,
-          "w": 24,
-          "x": 0,
-          "y": 22
-        },
-        "id": 5
+        "builtIn": 1,
+        "datasource": "-- Grafana --",
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
       }
-    ],
-    "templating": {
-      "list": [
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": 13,
+  "links": [],
+  "panels": [
+    {
+      "datasource": "$DS_PROM",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "12.0.0",
+      "targets": [
         {
-          "type": "datasource",
-          "name": "DS_PROM",
-          "label": "Datasource",
-          "query": "prometheus",
-          "refresh": 1
+          "expr": "rate(saga_started_total{service_name=\"$service\"}[1m])",
+          "legendFormat": "started",
+          "refId": "A"
         },
         {
-          "name": "service",
-          "label": "Service name",
-          "type": "query",
-          "datasource": "$DS_PROM",
-          "refresh": 1,
-          "query": "label_values(saga_started_total, service_name)"
+          "expr": "rate(saga_succeeded_total{service_name=\"$service\"}[1m])",
+          "legendFormat": "succeeded",
+          "refId": "B"
+        },
+        {
+          "expr": "rate(saga_failed_total{service_name=\"$service\"}[1m])",
+          "legendFormat": "failed",
+          "refId": "C"
         }
-      ]
+      ],
+      "title": "Saga Started / Succeeded / Failed (rate per min)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "$DS_PROM",
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "max": 100,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 0,
+        "y": 8
+      },
+      "id": 2,
+      "options": {
+        "max": 100,
+        "min": 0,
+        "minVizHeight": 75,
+        "minVizWidth": 75,
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true,
+        "sizing": "auto"
+      },
+      "pluginVersion": "12.0.0",
+      "targets": [
+        {
+          "expr": "100 * (saga_succeeded_total{service_name=\"$service\"} / saga_started_total{service_name=\"$service\"})",
+          "refId": "A"
+        }
+      ],
+      "title": "Saga Success Rate (%)",
+      "type": "gauge"
+    },
+    {
+      "datasource": "$DS_PROM",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 8,
+        "y": 8
+      },
+      "id": 4,
+      "options": {},
+      "pluginVersion": "12.0.0",
+      "targets": [
+        {
+          "expr": "increase(saga_activity_total{activity=\"booking\",status=\"failed\"}[5m])",
+          "legendFormat": "booking",
+          "refId": "A"
+        },
+        {
+          "expr": "increase(saga_activity_total{activity=\"ticket\",status=\"failed\"}[5m])",
+          "legendFormat": "ticket",
+          "refId": "B"
+        },
+        {
+          "expr": "increase(saga_activity_total{activity=\"payment\",status=\"failed\"}[5m])",
+          "legendFormat": "payment",
+          "refId": "C"
+        },
+        {
+          "expr": "increase(saga_activity_total{activity=\"notification\",status=\"failed\"}[5m])",
+          "legendFormat": "notification",
+          "refId": "D"
+        }
+      ],
+      "title": "Activity Failures (last 5m)",
+      "type": "barGauge"
+    },
+    {
+      "datasource": "$DS_PROM",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "__systemRef": "hideSeriesFrom",
+            "matcher": {
+              "id": "byNames",
+              "options": {
+                "mode": "exclude",
+                "names": [
+                  "ticket"
+                ],
+                "prefix": "All except:",
+                "readOnly": true
+              }
+            },
+            "properties": [
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": true
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 14
+      },
+      "id": 3,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "12.0.0",
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "rate(saga_booking_started_total[$__rate_interval])",
+          "legendFormat": "booking",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "editorMode": "code",
+          "expr": "rate(saga_ticket_started_total[$__rate_interval])",
+          "legendFormat": "ticket",
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "editorMode": "code",
+          "expr": "rate(saga_payment_started_total[$__rate_interval])",
+          "legendFormat": "payment",
+          "range": true,
+          "refId": "C"
+        },
+        {
+          "editorMode": "code",
+          "expr": "rate(saga_notification_started_total[$__rate_interval])",
+          "legendFormat": "notification",
+          "range": true,
+          "refId": "D"
+        }
+      ],
+      "title": "Activity Succeeded (rate per min)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "$DS_PROM",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 22
+      },
+      "id": 5,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "12.0.0",
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "rate(saga_activity_latency_ms_milliseconds_sum{activity=\"booking\"}[1m]) / rate(saga_activity_latency_ms_milliseconds_count{activity=\"booking\"}[1m])",
+          "legendFormat": "booking",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "editorMode": "code",
+          "expr": "rate(saga_activity_latency_ms_milliseconds_sum{activity=\"ticket\"}[1m]) / rate(saga_activity_latency_ms_milliseconds_count{activity=\"ticket\"}[1m])",
+          "legendFormat": "ticket",
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "editorMode": "code",
+          "expr": "rate(saga_activity_latency_ms_milliseconds_sum{activity=\"payment\"}[1m]) / rate(saga_activity_latency_ms_milliseconds_count{activity=\"payment\"}[1m])",
+          "legendFormat": "payment",
+          "range": true,
+          "refId": "C"
+        },
+        {
+          "editorMode": "code",
+          "expr": "rate(saga_activity_latency_ms_milliseconds_sum{activity=\"notification\"}[1m]) / rate(saga_activity_latency_ms_milliseconds_count{activity=\"notification\"}[1m])",
+          "legendFormat": "notification",
+          "range": true,
+          "refId": "D"
+        }
+      ],
+      "title": "Activity Latency (avg ms)",
+      "type": "timeseries"
     }
+  ],
+  "preload": false,
+  "refresh": "5s",
+  "schemaVersion": 41,
+  "tags": [
+    "saga",
+    "otel",
+    "service"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "text": "prometheus",
+          "value": "aeldxquda2akga"
+        },
+        "label": "Datasource",
+        "name": "DS_PROM",
+        "options": [],
+        "query": "prometheus",
+        "refresh": 1,
+        "type": "datasource"
+      },
+      {
+        "current": {
+          "text": "",
+          "value": ""
+        },
+        "datasource": "$DS_PROM",
+        "label": "Service name",
+        "name": "service",
+        "options": [],
+        "query": "label_values(saga_started_total, service_name)",
+        "refresh": 1,
+        "type": "query"
+      }
+    ]
   },
-  "overwrite": false
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Saga‑Service Metrics",
+  "uid": "saga_service_metrics_v1",
+  "version": 4
 }

@@ -261,11 +261,8 @@
         "models.CreateBookingData": {
             "type": "object",
             "properties": {
-                "id": {
-                    "type": "integer"
-                },
                 "price": {
-                    "type": "integer"
+                    "type": "number"
                 },
                 "ticketID": {
                     "type": "integer"
@@ -278,9 +275,6 @@
         "types.CreateBookingInternalRequest": {
             "type": "object",
             "properties": {
-                "booking_id": {
-                    "type": "integer"
-                },
                 "ticket_id": {
                     "type": "integer"
                 },

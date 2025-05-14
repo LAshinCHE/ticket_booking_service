@@ -37,7 +37,7 @@ func NewTemporalClient() (*TemporalClient, error) {
 	return &TemporalClient{Client: c}, nil
 }
 
-func (s *TemporalClient) StartBookingSaga(ctx context.Context, req models.CreateBookingData) error {
+func (s *TemporalClient) StartBookingSaga(ctx context.Context, req models.CreateBookingData) (int, error) {
 	ctx, span := otel.Tracer("booking-service").Start(ctx, "SagaClient.StartBookingSaga")
 	defer span.End()
 	options := client.StartWorkflowOptions{
@@ -59,14 +59,14 @@ func (s *TemporalClient) StartBookingSaga(ctx context.Context, req models.Create
 	if err != nil {
 		log.Fatalln("Unable to execute workflow", err)
 	}
-
-	err = we.Get(ctx, nil)
+	var bookingID int
+	err = we.Get(ctx, &bookingID)
 	if err != nil {
 		log.Println("Workflow execution failed:", err)
-		return err
+		return -1, err
 	}
 
 	fmt.Println("Workflow completed successfully")
 
-	return nil
+	return bookingID, nil
 }

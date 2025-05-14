@@ -25,11 +25,11 @@ payment-db-up:
 	goose -dir ./payment-service/migrations postgres "postgresql://payment:paymentpass@localhost:5434/paymentdb?sslmode=disable" up
 
 payment-db-down:
-	goose -dir ./payment-service/migrations postgres "postgresql://payment:paymentpass@localhost:5434/paymentdb?sslmode=disable" donw
+	goose -dir ./payment-service/migrations postgres "postgresql://payment:paymentpass@localhost:5434/paymentdb?sslmode=disable" down
 
 seed:
 	psql "postgresql://payment:paymentpass@localhost:5434/paymentdb?sslmode=disable" -f ./generate-data/user_data.sql
 	psql "postgresql://ticket:ticketpass@localhost:5433/ticketdb?sslmode=disable" -f ./generate-data/ticket_data.sql
 
 test:
-	k6 run generate-data/tests-service/loadtest.js
+	k6 run ./generate-data/test-service/loadtest.js

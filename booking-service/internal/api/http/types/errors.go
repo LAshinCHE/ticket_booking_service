@@ -2,15 +2,9 @@ package types
 
 import (
 	"encoding/json"
-	"errors"
 	"net/http"
 
 	"github.com/LAshinCHE/ticket_booking_service/booking-service/internal/repository"
-)
-
-var (
-	MissingUUID = errors.New("[Bad request]: Missing uuid")
-	InvalidUUID = errors.New("[Bad request]: Invalid uuid")
 )
 
 func ProcessError(w http.ResponseWriter, err error, resp any) {

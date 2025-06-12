@@ -136,8 +136,8 @@ func (h *Handler) CreateBookingHandler(writer http.ResponseWriter, request *http
 	start := time.Now()
 	ctx, span := otel.Tracer("booking-service").Start(request.Context(), "CreateBookingHandler")
 	defer span.End()
-
 	handlerName := "CreateBookingHandler"
+	metrics.IncRespByHandler(ctx, handlerName)
 	defer func() {
 		duration := float64(time.Since(start).Milliseconds())
 		metrics.ObserveRequestDuration(ctx, handlerName, duration)

@@ -19,7 +19,7 @@ func main() {
 	}
 	defer fileUser.Close()
 
-	for i := 0; i <= 1000; i++ {
+	for i := 0; i <= 3000; i++ {
 		id := i
 		balance := rand.Float64()*400 + 100
 

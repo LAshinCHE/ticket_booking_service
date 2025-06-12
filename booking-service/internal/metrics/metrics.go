@@ -23,6 +23,8 @@ var (
 	clientErrorTotal metric.Int64Counter
 	serverErrorTotal metric.Int64Counter
 
+	responseTotal metric.Int64Counter
+
 	requestLatency metric.Float64Histogram
 )
 
@@ -43,6 +45,14 @@ func InitMetrics() {
 
 	meter := otel.GetMeterProvider().Meter("booking-service-metrics")
 
+	if err != nil {
+		log.Fatalf("failed to create metric: %v", err)
+	}
+
+	responseTotal, err = meter.Int64Counter(
+		"booking_response_total",
+		metric.WithDescription("Total number of response"),
+	)
 	if err != nil {
 		log.Fatalf("failed to create metric: %v", err)
 	}
@@ -78,6 +88,12 @@ func InitMetrics() {
 	if err != nil {
 		log.Fatalf("failed to create booking_http_request_duration_millisecond: %v", err)
 	}
+}
+
+func IncRespByHandler(ctx context.Context, handler string) {
+	responseTotal.Add(ctx, 1, metric.WithAttributes(
+		attribute.String(handlerLabel, handler),
+	))
 }
 
 func IncOkRespByHandler(ctx context.Context, handler string) {

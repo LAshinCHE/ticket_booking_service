@@ -2,8 +2,16 @@ import http from 'k6/http';
 import { sleep } from 'k6';
 
 export const options = {
-  vus: 100,           
-  duration: '10s'    
+  scenarios: {
+    constant_rate_test: {
+      executor: 'constant-arrival-rate',
+      rate: 10,               
+      timeUnit: '1s',           
+      duration: '4s',
+      preAllocatedVUs: 5,     
+      maxVUs: 5,            
+    },
+  },
 };
 
 export default function () {
@@ -21,6 +29,4 @@ export default function () {
   const headers = { 'Content-Type': 'application/json' };
 
   http.post('http://localhost:8081/booking/', payload, { headers });
-
-  sleep(1); 
 }

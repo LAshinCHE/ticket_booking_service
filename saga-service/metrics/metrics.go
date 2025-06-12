@@ -38,6 +38,8 @@ var (
 
 	ActivityLatencyMs metric.Float64Histogram
 
+	HTTPCallLatencyMs metric.Float64Histogram
+
 	provider *sdkmetric.MeterProvider
 )
 
@@ -102,7 +104,6 @@ func Init(ctx context.Context, collectorEndpoint string, serviceName string) err
 		}
 	}
 
-	// ----- latency histogram -----
 	if ActivityLatencyMs, err = meter.Float64Histogram("saga.activity.latency_ms",
 		metric.WithDescription("Activity latency (ms)"),
 		metric.WithUnit("ms")); err != nil {

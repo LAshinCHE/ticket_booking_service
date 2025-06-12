@@ -23,7 +23,7 @@ func main() {
 		panic(err)
 	}
 	defer fileIds.Close()
-	for i := 0; i <= 1000; i++ {
+	for i := 0; i <= 3000; i++ {
 		id := i
 		price := rand.Float64()*100 + 100
 		available := true
